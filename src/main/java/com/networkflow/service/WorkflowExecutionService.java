@@ -1,6 +1,8 @@
 package com.networkflow.service;
 
 import com.networkflow.model.Workflow;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 import com.networkflow.model.WorkflowTask;
 import com.networkflow.model.TaskConnection;
 import com.networkflow.template.DeviceConfigTemplate;
@@ -15,17 +17,20 @@ import java.util.concurrent.*;
 /**
  * Service for executing workflows with support for templates and dynamic task insertion
  */
+@Service
 public class WorkflowExecutionService {
     private static final Logger logger = LoggerFactory.getLogger(WorkflowExecutionService.class);
     
-    private final NetmikoService netmikoService;
-    private final TemplateService templateService;
+    @Autowired
+    private NetmikoService netmikoService;
+    
+    @Autowired
+    private TemplateService templateService;
+    
     private final ExecutorService executorService;
     private final Map<String, WorkflowExecution> activeExecutions;
 
     public WorkflowExecutionService() {
-        this.netmikoService = new NetmikoService();
-        this.templateService = new TemplateService();
         this.executorService = Executors.newFixedThreadPool(10);
         this.activeExecutions = new ConcurrentHashMap<>();
     }

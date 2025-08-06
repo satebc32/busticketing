@@ -1,31 +1,35 @@
 # Network Device Configuration Workflow Builder
 
-A Java-based drag-and-drop workflow builder for network device configuration using Netmiko. This application allows you to create visual workflows with templates for automating network device configuration tasks.
+A **Spring Boot web-based** drag-and-drop workflow builder for network device configuration using Netmiko. This application provides a modern web interface for creating visual workflows with templates for automating network device configuration tasks.
 
 ## Features
 
-- **Drag-and-Drop GUI**: Visual workflow builder with intuitive drag-and-drop interface
-- **Template System**: Pre-defined and custom configuration templates for various device types
-- **Dynamic Task Insertion**: Insert tasks anywhere in the workflow via GUI
-- **Netmiko Integration**: Execute device configurations using Python Netmiko library
-- **Multiple Device Support**: Cisco IOS, NX-OS, Arista EOS, Juniper JunOS, and more
-- **Variable Management**: Dynamic variable substitution in templates and workflows
-- **Conditional Execution**: Support for conditional task execution and branching
-- **Real-time Execution**: Asynchronous workflow execution with real-time status updates
+- **🌐 Web-Based Interface**: Modern responsive web application accessible from any browser
+- **🎯 Drag-and-Drop GUI**: Visual workflow builder with intuitive drag-and-drop interface
+- **📋 Template System**: Pre-defined and custom configuration templates for various device types
+- **➕ Dynamic Task Insertion**: Insert tasks anywhere in the workflow via GUI
+- **🔌 Netmiko Integration**: Execute device configurations using Python Netmiko library
+- **🖥️ Multiple Device Support**: Cisco IOS, NX-OS, Arista EOS, Juniper JunOS, and more
+- **🔄 Variable Management**: Dynamic variable substitution in templates and workflows
+- **⚡ Real-time Updates**: WebSocket-based live status updates
+- **🚀 REST API**: Complete RESTful API for programmatic access
+- **📱 Responsive Design**: Works on desktop, tablet, and mobile devices
 
 ## Architecture
 
-- **Java Frontend**: JavaFX-based GUI for workflow design and management
-- **Python Backend**: Netmiko scripts for device configuration execution
-- **Template Engine**: JSON-based template system with parameter validation
-- **Workflow Engine**: Multi-threaded execution engine with dependency management
+- **🌐 Web Frontend**: Modern HTML5/CSS3/JavaScript interface with Bootstrap 5
+- **☕ Spring Boot Backend**: RESTful API with WebSocket support for real-time updates
+- **🐍 Python Integration**: Netmiko scripts for device configuration execution
+- **📋 Template Engine**: JSON-based template system with parameter validation
+- **⚙️ Workflow Engine**: Multi-threaded execution engine with dependency management
+- **📡 Real-time Communication**: WebSocket (STOMP) for live status updates
 
 ## Prerequisites
 
-- Java 11 or higher
-- Python 3.7 or higher
-- Maven 3.6 or higher
-- JavaFX (included in OpenJDK distributions or install separately)
+- **Java 17** or higher
+- **Python 3.7** or higher
+- **Maven 3.6** or higher
+- **Modern Web Browser** (Chrome, Firefox, Safari, Edge)
 
 ## Installation
 
@@ -48,16 +52,19 @@ pip install -r python/requirements.txt
 mvn clean compile
 ```
 
-### 4. Run the Application
+### 4. Run the Web Application
 
 ```bash
-mvn javafx:run
+mvn spring-boot:run
 ```
 
-Or run with Maven exec plugin:
+The application will be available at: **http://localhost:8080**
+
+Or build and run the JAR:
 
 ```bash
-mvn exec:java -Dexec.mainClass="com.networkflow.WorkflowApplication"
+mvn package
+java -jar target/device-config-workflow-1.0.0.jar
 ```
 
 ## Usage

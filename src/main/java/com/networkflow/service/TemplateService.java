@@ -5,6 +5,7 @@ import com.networkflow.template.TemplateParameter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
 
 import java.io.File;
 import java.io.IOException;
@@ -17,6 +18,7 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Service for managing device configuration templates
  */
+@Service
 public class TemplateService {
     private static final Logger logger = LoggerFactory.getLogger(TemplateService.class);
     

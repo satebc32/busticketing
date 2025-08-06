@@ -3,6 +3,7 @@ package com.networkflow.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -14,6 +15,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * Service for executing device configurations using Netmiko Python library
  */
+@Service
 public class NetmikoService {
     private static final Logger logger = LoggerFactory.getLogger(NetmikoService.class);
     private final ObjectMapper objectMapper;
