@@ -101,6 +101,18 @@
             pointer-events: none;
             display: none;
         }
+        
+        .parameter-row {
+            background: #f8f9fa;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+            border-left: 3px solid #007bff;
+        }
+        
+        .modal-lg {
+            max-width: 800px;
+        }
     </style>
 </head>
 <body>
@@ -224,6 +236,58 @@
         </div>
     </main>
 
+    <!-- Task Edit Modal -->
+    <div class="modal fade" id="taskEditModal" tabindex="-1" aria-labelledby="taskEditModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="taskEditModalLabel">
+                        <i class="fas fa-edit me-2"></i>Edit Task
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="taskEditForm">
+                        <!-- Basic Task Information -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="taskName" class="form-label">Task Name *</label>
+                                <input type="text" class="form-control" id="taskName" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="taskType" class="form-label">Task Type</label>
+                                <input type="text" class="form-control" id="taskType" readonly>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="taskDescription" class="form-label">Description</label>
+                            <textarea class="form-control" id="taskDescription" rows="2" placeholder="Optional task description"></textarea>
+                        </div>
+                        
+                        <!-- Dynamic Parameters Section -->
+                        <div class="mb-3">
+                            <h6 class="border-bottom pb-2">
+                                <i class="fas fa-cogs me-2"></i>Task Parameters
+                            </h6>
+                            <div id="taskParametersContainer">
+                                <!-- Parameters will be dynamically loaded here -->
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>Cancel
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="saveTaskChanges()">
+                        <i class="fas fa-save me-1"></i>Save Changes
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <!-- Bootstrap JS -->
@@ -234,6 +298,8 @@
         let selectedTask = null;
         let taskCounter = 0;
         let isDragging = false;
+        let editingTask = null;
+        let availableTemplates = [];
         
         // Get workflow ID from URL
         const workflowId = window.location.pathname.split('/').pop();
@@ -246,7 +312,18 @@
             }
             
             setupDragAndDrop();
+            loadTemplates();
         });
+        
+        function loadTemplates() {
+            $.get('/api/templates')
+                .done(function(templates) {
+                    availableTemplates = templates;
+                })
+                .fail(function() {
+                    console.log('Failed to load templates');
+                });
+        }
         
         function initializeNewWorkflow() {
             currentWorkflow = {
@@ -340,6 +417,7 @@
                 name: getTaskDisplayName(type),
                 type: type,
                 status: 'PENDING',
+                description: '',
                 parameters: getDefaultParameters(type),
                 positionX: Math.max(10, Math.min(x, 400)),
                 positionY: Math.max(10, Math.min(y, 350))
@@ -375,7 +453,7 @@
                     };
                 case 'TEMPLATE_CONFIG':
                     return {
-                        template_id: '',
+                        template_id: availableTemplates.length > 0 ? availableTemplates[0].id : '',
                         device_type: 'cisco_ios',
                         host: '192.168.1.1',
                         username: 'admin',
@@ -383,14 +461,15 @@
                     };
                 case 'CONDITION':
                     return {
-                        condition: '${variable} == "value"',
+                        condition: '${result} == "success"',
                         true_action: 'continue',
                         false_action: 'skip'
                     };
                 case 'VARIABLE_SET':
                     return {
                         variable_name: 'my_variable',
-                        variable_value: 'default_value'
+                        variable_value: 'default_value',
+                        variable_type: 'string'
                     };
                 default:
                     return {};
@@ -427,6 +506,9 @@
                         <small class="text-muted">${task.type}</small>
                     </div>
                     <div class="task-actions mt-1">
+                        <button class="btn btn-xs btn-outline-primary me-1" onclick="editTask('${task.id}')" title="Edit">
+                            <i class="fas fa-edit"></i>
+                        </button>
                         <button class="btn btn-xs btn-outline-danger" onclick="deleteTask('${task.id}')" title="Delete">
                             <i class="fas fa-trash"></i>
                         </button>
@@ -467,6 +549,232 @@
             } else {
                 showWorkflowProperties();
             }
+        }
+        
+        function editTask(taskId) {
+            const task = currentWorkflow.tasks.find(t => t.id === taskId);
+            if (!task) {
+                showAlert('Task not found', 'danger');
+                return;
+            }
+            
+            editingTask = task;
+            populateEditModal(task);
+            
+            const modal = new bootstrap.Modal(document.getElementById('taskEditModal'));
+            modal.show();
+        }
+        
+        function populateEditModal(task) {
+            $('#taskName').val(task.name);
+            $('#taskType').val(task.type);
+            $('#taskDescription').val(task.description || '');
+            
+            // Clear and populate parameters
+            const container = $('#taskParametersContainer');
+            container.empty();
+            
+            const parameters = task.parameters || {};
+            
+            switch(task.type) {
+                case 'DEVICE_CONFIG':
+                    container.html(`
+                        <div class="parameter-row">
+                            <label class="form-label">Device Type *</label>
+                            <select class="form-control" id="param_device_type" required>
+                                <option value="cisco_ios" ${parameters.device_type === 'cisco_ios' ? 'selected' : ''}>Cisco IOS</option>
+                                <option value="cisco_nxos" ${parameters.device_type === 'cisco_nxos' ? 'selected' : ''}>Cisco NX-OS</option>
+                                <option value="cisco_asa" ${parameters.device_type === 'cisco_asa' ? 'selected' : ''}>Cisco ASA</option>
+                                <option value="arista_eos" ${parameters.device_type === 'arista_eos' ? 'selected' : ''}>Arista EOS</option>
+                                <option value="juniper_junos" ${parameters.device_type === 'juniper_junos' ? 'selected' : ''}>Juniper JunOS</option>
+                                <option value="linux" ${parameters.device_type === 'linux' ? 'selected' : ''}>Linux</option>
+                            </select>
+                        </div>
+                        <div class="parameter-row">
+                            <label class="form-label">Host/IP Address *</label>
+                            <input type="text" class="form-control" id="param_host" value="${escapeHtml(parameters.host || '')}" required>
+                        </div>
+                        <div class="parameter-row">
+                            <label class="form-label">Username *</label>
+                            <input type="text" class="form-control" id="param_username" value="${escapeHtml(parameters.username || '')}" required>
+                        </div>
+                        <div class="parameter-row">
+                            <label class="form-label">Password *</label>
+                            <input type="password" class="form-control" id="param_password" value="${escapeHtml(parameters.password || '')}" required>
+                        </div>
+                        <div class="parameter-row">
+                            <label class="form-label">Commands *</label>
+                            <textarea class="form-control" id="param_commands" rows="4" required>${escapeHtml(parameters.commands || '')}</textarea>
+                            <small class="form-text text-muted">Enter one command per line</small>
+                        </div>
+                    `);
+                    break;
+                    
+                case 'TEMPLATE_CONFIG':
+                    let templateOptions = '<option value="">Select a template</option>';
+                    availableTemplates.forEach(template => {
+                        const selected = parameters.template_id === template.id ? 'selected' : '';
+                        templateOptions += `<option value="${template.id}" ${selected}>${escapeHtml(template.name)} (${template.deviceType})</option>`;
+                    });
+                    
+                    container.html(`
+                        <div class="parameter-row">
+                            <label class="form-label">Configuration Template *</label>
+                            <select class="form-control" id="param_template_id" required>
+                                ${templateOptions}
+                            </select>
+                        </div>
+                        <div class="parameter-row">
+                            <label class="form-label">Device Type *</label>
+                            <select class="form-control" id="param_device_type" required>
+                                <option value="cisco_ios" ${parameters.device_type === 'cisco_ios' ? 'selected' : ''}>Cisco IOS</option>
+                                <option value="cisco_nxos" ${parameters.device_type === 'cisco_nxos' ? 'selected' : ''}>Cisco NX-OS</option>
+                                <option value="cisco_asa" ${parameters.device_type === 'cisco_asa' ? 'selected' : ''}>Cisco ASA</option>
+                                <option value="arista_eos" ${parameters.device_type === 'arista_eos' ? 'selected' : ''}>Arista EOS</option>
+                                <option value="juniper_junos" ${parameters.device_type === 'juniper_junos' ? 'selected' : ''}>Juniper JunOS</option>
+                                <option value="linux" ${parameters.device_type === 'linux' ? 'selected' : ''}>Linux</option>
+                            </select>
+                        </div>
+                        <div class="parameter-row">
+                            <label class="form-label">Host/IP Address *</label>
+                            <input type="text" class="form-control" id="param_host" value="${escapeHtml(parameters.host || '')}" required>
+                        </div>
+                        <div class="parameter-row">
+                            <label class="form-label">Username *</label>
+                            <input type="text" class="form-control" id="param_username" value="${escapeHtml(parameters.username || '')}" required>
+                        </div>
+                        <div class="parameter-row">
+                            <label class="form-label">Password *</label>
+                            <input type="password" class="form-control" id="param_password" value="${escapeHtml(parameters.password || '')}" required>
+                        </div>
+                    `);
+                    break;
+                    
+                case 'CONDITION':
+                    container.html(`
+                        <div class="parameter-row">
+                            <label class="form-label">Condition Expression *</label>
+                            <input type="text" class="form-control" id="param_condition" value="${escapeHtml(parameters.condition || '')}" required>
+                            <small class="form-text text-muted">Example: \${result} == "success" or \${error_count} > 0</small>
+                        </div>
+                        <div class="parameter-row">
+                            <label class="form-label">Action if True</label>
+                            <select class="form-control" id="param_true_action">
+                                <option value="continue" ${parameters.true_action === 'continue' ? 'selected' : ''}>Continue to next task</option>
+                                <option value="skip" ${parameters.true_action === 'skip' ? 'selected' : ''}>Skip next task</option>
+                                <option value="stop" ${parameters.true_action === 'stop' ? 'selected' : ''}>Stop workflow</option>
+                            </select>
+                        </div>
+                        <div class="parameter-row">
+                            <label class="form-label">Action if False</label>
+                            <select class="form-control" id="param_false_action">
+                                <option value="continue" ${parameters.false_action === 'continue' ? 'selected' : ''}>Continue to next task</option>
+                                <option value="skip" ${parameters.false_action === 'skip' ? 'selected' : ''}>Skip next task</option>
+                                <option value="stop" ${parameters.false_action === 'stop' ? 'selected' : ''}>Stop workflow</option>
+                            </select>
+                        </div>
+                    `);
+                    break;
+                    
+                case 'VARIABLE_SET':
+                    container.html(`
+                        <div class="parameter-row">
+                            <label class="form-label">Variable Name *</label>
+                            <input type="text" class="form-control" id="param_variable_name" value="${escapeHtml(parameters.variable_name || '')}" required>
+                            <small class="form-text text-muted">Use alphanumeric characters and underscores only</small>
+                        </div>
+                        <div class="parameter-row">
+                            <label class="form-label">Variable Value *</label>
+                            <textarea class="form-control" id="param_variable_value" rows="3" required>${escapeHtml(parameters.variable_value || '')}</textarea>
+                            <small class="form-text text-muted">Can reference other variables using \${variable_name}</small>
+                        </div>
+                        <div class="parameter-row">
+                            <label class="form-label">Variable Type</label>
+                            <select class="form-control" id="param_variable_type">
+                                <option value="string" ${parameters.variable_type === 'string' ? 'selected' : ''}>String</option>
+                                <option value="number" ${parameters.variable_type === 'number' ? 'selected' : ''}>Number</option>
+                                <option value="boolean" ${parameters.variable_type === 'boolean' ? 'selected' : ''}>Boolean</option>
+                                <option value="json" ${parameters.variable_type === 'json' ? 'selected' : ''}>JSON Object</option>
+                            </select>
+                        </div>
+                    `);
+                    break;
+            }
+        }
+        
+        function saveTaskChanges() {
+            if (!editingTask) {
+                showAlert('No task selected for editing', 'danger');
+                return;
+            }
+            
+            // Validate required fields
+            const requiredFields = $('#taskEditForm [required]');
+            let isValid = true;
+            
+            requiredFields.each(function() {
+                if (!$(this).val().trim()) {
+                    $(this).addClass('is-invalid');
+                    isValid = false;
+                } else {
+                    $(this).removeClass('is-invalid');
+                }
+            });
+            
+            if (!isValid) {
+                showAlert('Please fill in all required fields', 'warning');
+                return;
+            }
+            
+            // Update task properties
+            editingTask.name = $('#taskName').val().trim();
+            editingTask.description = $('#taskDescription').val().trim();
+            
+            // Update parameters based on task type
+            const newParameters = {};
+            
+            switch(editingTask.type) {
+                case 'DEVICE_CONFIG':
+                    newParameters.device_type = $('#param_device_type').val();
+                    newParameters.host = $('#param_host').val().trim();
+                    newParameters.username = $('#param_username').val().trim();
+                    newParameters.password = $('#param_password').val();
+                    newParameters.commands = $('#param_commands').val().trim();
+                    break;
+                    
+                case 'TEMPLATE_CONFIG':
+                    newParameters.template_id = $('#param_template_id').val();
+                    newParameters.device_type = $('#param_device_type').val();
+                    newParameters.host = $('#param_host').val().trim();
+                    newParameters.username = $('#param_username').val().trim();
+                    newParameters.password = $('#param_password').val();
+                    break;
+                    
+                case 'CONDITION':
+                    newParameters.condition = $('#param_condition').val().trim();
+                    newParameters.true_action = $('#param_true_action').val();
+                    newParameters.false_action = $('#param_false_action').val();
+                    break;
+                    
+                case 'VARIABLE_SET':
+                    newParameters.variable_name = $('#param_variable_name').val().trim();
+                    newParameters.variable_value = $('#param_variable_value').val().trim();
+                    newParameters.variable_type = $('#param_variable_type').val();
+                    break;
+            }
+            
+            editingTask.parameters = newParameters;
+            
+            // Update the visual representation
+            renderTask(editingTask);
+            selectTask(editingTask);
+            
+            // Close modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('taskEditModal'));
+            modal.hide();
+            
+            showAlert('Task updated successfully', 'success');
+            editingTask = null;
         }
         
         function deleteTask(taskId) {
@@ -511,6 +819,7 @@
                     <p><strong>Name:</strong> ${escapeHtml(task.name)}</p>
                     <p><strong>Type:</strong> ${task.type}</p>
                     <p><strong>Status:</strong> ${task.status}</p>
+                    ${task.description ? `<p><strong>Description:</strong> ${escapeHtml(task.description)}</p>` : ''}
                 </div>
                 
                 <div class="mb-3">
@@ -558,10 +867,6 @@
                 </div>
             `;
             $('#properties-panel').html(properties);
-        }
-        
-        function editTask(taskId) {
-            showAlert('Task editing interface coming soon', 'info');
         }
         
         function updateWorkflowDisplay() {
