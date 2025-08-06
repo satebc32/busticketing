@@ -1,104 +1,137 @@
 <!DOCTYPE html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout/base :: layout}">
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <th:block th:fragment="head-extra">
-        <!-- Dragula CSS for drag and drop -->
-        <link href="https://cdn.jsdelivr.net/npm/dragula@3.7.3/dist/dragula.min.css" rel="stylesheet">
-        <!-- Custom workflow editor CSS -->
-        <style>
-            .workflow-canvas {
-                background: #f8f9fa;
-                border: 2px dashed #dee2e6;
-                min-height: 600px;
-                position: relative;
-                overflow: auto;
-                border-radius: 8px;
-            }
-            
-            .task-node {
-                position: absolute;
-                width: 150px;
-                min-height: 80px;
-                padding: 10px;
-                border-radius: 8px;
-                cursor: move;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                transition: all 0.2s ease;
-                z-index: 10;
-            }
-            
-            .task-node:hover {
-                box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-                transform: translateY(-2px);
-            }
-            
-            .task-node.selected {
-                border: 2px solid #007bff;
-                box-shadow: 0 0 10px rgba(0,123,255,0.5);
-            }
-            
-            .task-type-DEVICE_CONFIG { background: linear-gradient(135deg, #e3f2fd, #bbdefb); }
-            .task-type-TEMPLATE_CONFIG { background: linear-gradient(135deg, #f3e5f5, #ce93d8); }
-            .task-type-CONDITION { background: linear-gradient(135deg, #fff3e0, #ffcc02); }
-            .task-type-VARIABLE_SET { background: linear-gradient(135deg, #e8f5e8, #a5d6a7); }
-            .task-type-SCRIPT_EXECUTION { background: linear-gradient(135deg, #fce4ec, #f8bbd9); }
-            
-            .task-status-PENDING { border-left: 4px solid #6c757d; }
-            .task-status-RUNNING { border-left: 4px solid #ffc107; }
-            .task-status-COMPLETED { border-left: 4px solid #28a745; }
-            .task-status-FAILED { border-left: 4px solid #dc3545; }
-            
-            .task-palette {
-                max-height: 500px;
-                overflow-y: auto;
-            }
-            
-            .task-palette-item {
-                cursor: grab;
-                margin-bottom: 10px;
-                padding: 15px;
-                border: 1px solid #dee2e6;
-                border-radius: 8px;
-                background: white;
-                transition: all 0.2s ease;
-            }
-            
-            .task-palette-item:hover {
-                border-color: #007bff;
-                background: #f8f9fa;
-            }
-            
-            .task-palette-item:active {
-                cursor: grabbing;
-            }
-            
-            .connection-line {
-                position: absolute;
-                pointer-events: none;
-                z-index: 5;
-            }
-            
-            .properties-panel {
-                max-height: 600px;
-                overflow-y: auto;
-            }
-            
-            .canvas-grid {
-                background-image: 
-                    linear-gradient(rgba(0,0,0,.05) 1px, transparent 1px),
-                    linear-gradient(90deg, rgba(0,0,0,.05) 1px, transparent 1px);
-                background-size: 20px 20px;
-            }
-            
-            .toolbar-item {
-                margin-right: 5px;
-                margin-bottom: 5px;
-            }
-        </style>
-    </th:block>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Workflow Editor - Network Workflow Builder</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
+    <!-- Dragula CSS for drag and drop -->
+    <link href="https://cdn.jsdelivr.net/npm/dragula@3.7.3/dist/dragula.min.css" rel="stylesheet">
+    
+    <!-- Custom workflow editor CSS -->
+    <style>
+        .workflow-canvas {
+            background: #f8f9fa;
+            border: 2px dashed #dee2e6;
+            min-height: 600px;
+            position: relative;
+            overflow: auto;
+            border-radius: 8px;
+        }
+        
+        .task-node {
+            position: absolute;
+            width: 150px;
+            min-height: 80px;
+            padding: 10px;
+            border-radius: 8px;
+            cursor: move;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: all 0.2s ease;
+            z-index: 10;
+        }
+        
+        .task-node:hover {
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+            transform: translateY(-2px);
+        }
+        
+        .task-node.selected {
+            border: 2px solid #007bff;
+            box-shadow: 0 0 10px rgba(0,123,255,0.5);
+        }
+        
+        .task-type-DEVICE_CONFIG { background: linear-gradient(135deg, #e3f2fd, #bbdefb); }
+        .task-type-TEMPLATE_CONFIG { background: linear-gradient(135deg, #f3e5f5, #ce93d8); }
+        .task-type-CONDITION { background: linear-gradient(135deg, #fff3e0, #ffcc02); }
+        .task-type-VARIABLE_SET { background: linear-gradient(135deg, #e8f5e8, #a5d6a7); }
+        .task-type-SCRIPT_EXECUTION { background: linear-gradient(135deg, #fce4ec, #f8bbd9); }
+        
+        .task-status-PENDING { border-left: 4px solid #6c757d; }
+        .task-status-RUNNING { border-left: 4px solid #ffc107; }
+        .task-status-COMPLETED { border-left: 4px solid #28a745; }
+        .task-status-FAILED { border-left: 4px solid #dc3545; }
+        
+        .task-palette {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        
+        .task-palette-item {
+            cursor: grab;
+            margin-bottom: 10px;
+            padding: 15px;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            background: white;
+            transition: all 0.2s ease;
+        }
+        
+        .task-palette-item:hover {
+            border-color: #007bff;
+            background: #f8f9fa;
+        }
+        
+        .task-palette-item:active {
+            cursor: grabbing;
+        }
+        
+        .connection-line {
+            position: absolute;
+            pointer-events: none;
+            z-index: 5;
+        }
+        
+        .properties-panel {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        
+        .canvas-grid {
+            background-image: 
+                linear-gradient(rgba(0,0,0,.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0,0,0,.05) 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+        
+        .toolbar-item {
+            margin-right: 5px;
+            margin-bottom: 5px;
+        }
+    </style>
 </head>
 <body>
-    <div th:fragment="content">
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-project-diagram me-2"></i>
+                Network Workflow Builder
+            </a>
+            
+            <div class="navbar-nav">
+                <a class="nav-link" href="/workflows">
+                    <i class="fas fa-sitemap me-1"></i>Workflows
+                </a>
+                <a class="nav-link" href="/templates">
+                    <i class="fas fa-file-code me-1"></i>Templates
+                </a>
+                <a class="nav-link" href="/about">
+                    <i class="fas fa-info-circle me-1"></i>About
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="container-fluid py-4">
+        <!-- Alerts -->
+        <div id="alert-container"></div>
+        
         <div class="row">
             <!-- Left Panel - Task Palette -->
             <div class="col-md-3">
@@ -178,12 +211,6 @@
                                     <button class="btn btn-sm btn-secondary toolbar-item" onclick="clearCanvas()" title="Clear">
                                         <i class="fas fa-trash"></i>
                                     </button>
-                                    <button class="btn btn-sm btn-outline-secondary toolbar-item" onclick="zoomIn()" title="Zoom In">
-                                        <i class="fas fa-search-plus"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-outline-secondary toolbar-item" onclick="zoomOut()" title="Zoom Out">
-                                        <i class="fas fa-search-minus"></i>
-                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -213,757 +240,336 @@
                 </div>
             </div>
         </div>
+    </main>
 
-        <!-- Task Edit Modal -->
-        <div class="modal fade" id="taskModal" tabindex="-1">
-            <div class="modal-dialog modal-lg">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">Edit Task</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body" id="task-modal-body">
-                        <!-- Task form will be loaded here -->
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="button" class="btn btn-primary" onclick="saveTaskChanges()">Save Changes</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Insert Task Modal -->
-        <div class="modal fade" id="insertTaskModal" tabindex="-1">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">Insert Task</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label class="form-label">Insert after task:</label>
-                            <input type="text" class="form-control" id="insert-after-task" readonly>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Task Type:</label>
-                            <select class="form-select" id="insert-task-type">
-                                <option value="DEVICE_CONFIG">Device Config</option>
-                                <option value="TEMPLATE_CONFIG">Template Config</option>
-                                <option value="CONDITION">Condition</option>
-                                <option value="VARIABLE_SET">Set Variable</option>
-                                <option value="SCRIPT_EXECUTION">Script Execution</option>
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Task Name:</label>
-                            <input type="text" class="form-control" id="insert-task-name" placeholder="Enter task name">
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="button" class="btn btn-primary" onclick="insertTask()">Insert Task</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <th:block th:fragment="scripts-extra">
-        <!-- Dragula for drag and drop -->
-        <script src="https://cdn.jsdelivr.net/npm/dragula@3.7.3/dist/dragula.min.js"></script>
-        <!-- JointJS for workflow diagrams -->
-        <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/jointjs/3.7.0/joint.min.css" />
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/backbone.js/1.4.1/backbone-min.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/jointjs/3.7.0/joint.min.js"></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Dragula for drag and drop -->
+    <script src="https://cdn.jsdelivr.net/npm/dragula@3.7.3/dist/dragula.min.js"></script>
+    
+    <script>
+        let currentWorkflow = null;
+        let selectedTask = null;
+        let taskCounter = 0;
+        let templates = [];
         
-        <script>
-            let currentWorkflow = null;
-            let selectedTask = null;
-            let taskCounter = 0;
-            let connections = [];
-            let connectMode = false;
-            let connectSourceTask = null;
-            let templates = [];
+        // Get workflow ID from URL
+        const workflowId = window.location.pathname.split('/').pop();
+        
+        $(document).ready(function() {
+            if (workflowId && workflowId !== 'new') {
+                loadWorkflow(workflowId);
+            } else {
+                initializeNewWorkflow();
+            }
             
-            // URL parameters
-            const urlParams = new URLSearchParams(window.location.search);
-            const workflowId = window.location.pathname.split('/').pop();
-            
-            $(document).ready(function() {
-                if (workflowId && workflowId !== 'new') {
-                    loadWorkflow(workflowId);
-                } else {
+            loadTemplates();
+            setupDragAndDrop();
+            setupCanvasEvents();
+        });
+        
+        function initializeNewWorkflow() {
+            currentWorkflow = {
+                id: null,
+                name: 'New Workflow',
+                description: '',
+                tasks: [],
+                connections: [],
+                globalVariables: {},
+                status: 'DRAFT'
+            };
+            updateWorkflowDisplay();
+        }
+        
+        function loadWorkflow(id) {
+            $.get('/api/workflows/' + id)
+                .done(function(workflow) {
+                    currentWorkflow = workflow;
+                    updateWorkflowDisplay();
+                    renderWorkflow();
+                })
+                .fail(function() {
+                    showAlert('Failed to load workflow', 'danger');
                     initializeNewWorkflow();
-                }
-                
-                loadTemplates();
-                setupDragAndDrop();
-                setupCanvasEvents();
+                });
+        }
+        
+        function loadTemplates() {
+            $.get('/api/templates')
+                .done(function(data) {
+                    templates = data;
+                    renderTemplates();
+                })
+                .fail(function() {
+                    $('#templates-list').html('<div class="text-center text-danger">Failed to load templates</div>');
+                });
+        }
+        
+        function renderTemplates() {
+            const templatesList = $('#templates-list');
+            templatesList.empty();
+            
+            if (templates.length === 0) {
+                templatesList.html('<div class="text-muted small">No templates available</div>');
+                return;
+            }
+            
+            templates.forEach(function(template) {
+                const templateItem = `
+                    <div class="task-palette-item" data-template-id="${template.id}">
+                        <i class="fas fa-file-code text-primary"></i>
+                        <strong class="d-block">${escapeHtml(template.name)}</strong>
+                        <small class="text-muted">${escapeHtml(template.deviceType)}</small>
+                    </div>
+                `;
+                templatesList.append(templateItem);
             });
-            
-            function initializeNewWorkflow() {
-                currentWorkflow = {
-                    id: null,
-                    name: 'New Workflow',
-                    description: '',
-                    tasks: [],
-                    connections: [],
-                    globalVariables: {},
-                    status: 'DRAFT'
-                };
-                updateWorkflowDisplay();
-            }
-            
-            function loadWorkflow(id) {
-                $.get('/api/workflows/' + id)
-                    .done(function(workflow) {
-                        currentWorkflow = workflow;
-                        updateWorkflowDisplay();
-                        renderWorkflow();
-                    })
-                    .fail(function() {
-                        showAlert('Failed to load workflow', 'danger');
-                        initializeNewWorkflow();
-                    });
-            }
-            
-            function loadTemplates() {
-                $.get('/api/templates')
-                    .done(function(data) {
-                        templates = data;
-                        renderTemplates();
-                    })
-                    .fail(function() {
-                        $('#templates-list').html('<div class="text-center text-danger">Failed to load templates</div>');
-                    });
-            }
-            
-            function renderTemplates() {
-                const templatesList = $('#templates-list');
-                templatesList.empty();
-                
-                if (templates.length === 0) {
-                    templatesList.html('<div class="text-muted small">No templates available</div>');
-                    return;
-                }
-                
-                templates.forEach(function(template) {
-                    const templateItem = `
-                        <div class="task-palette-item" data-template-id="${template.id}">
-                            <i class="fas fa-file-code text-primary"></i>
-                            <strong class="d-block">${escapeHtml(template.name)}</strong>
-                            <small class="text-muted">${escapeHtml(template.deviceType)}</small>
-                        </div>
-                    `;
-                    templatesList.append(templateItem);
-                });
-            }
-            
-            function setupDragAndDrop() {
-                // Make task palette items draggable
-                dragula([document.querySelector('.task-palette')], {
-                    copy: true,
-                    copySortSource: false,
-                    accepts: function (el, target) {
-                        return target === document.querySelector('#workflow-canvas');
-                    }
-                }).on('drop', function (el, target, source, sibling) {
-                    if (target && target.id === 'workflow-canvas') {
-                        createTaskFromPalette(el, event);
-                        el.remove(); // Remove the dragged copy
-                    }
-                });
-                
-                // Make task nodes draggable within canvas
-                dragula([document.querySelector('#workflow-canvas')], {
-                    moves: function (el, source, handle, sibling) {
-                        return el.classList.contains('task-node');
-                    }
-                }).on('drop', function (el, target, source, sibling) {
-                    updateTaskPosition(el);
-                });
-            }
-            
-            function setupCanvasEvents() {
-                $('#workflow-canvas').on('click', function(e) {
-                    if (e.target === this) {
-                        selectTask(null);
-                    }
-                });
-                
-                // Double-click to add task
-                $('#workflow-canvas').on('dblclick', function(e) {
-                    if (e.target === this) {
-                        const rect = this.getBoundingClientRect();
-                        const x = e.clientX - rect.left;
-                        const y = e.clientY - rect.top;
-                        showAddTaskDialog(x, y);
-                    }
-                });
-            }
-            
-            function createTaskFromPalette(paletteEl, event) {
-                const taskType = paletteEl.getAttribute('data-task-type');
-                const templateId = paletteEl.getAttribute('data-template-id');
-                const rect = $('#workflow-canvas')[0].getBoundingClientRect();
-                const x = event.clientX - rect.left - 75; // Center the task
-                const y = event.clientY - rect.top - 40;
-                
-                if (taskType) {
-                    createTask(taskType, null, x, y);
-                } else if (templateId) {
-                    const template = templates.find(t => t.id === templateId);
-                    if (template) {
-                        createTask('TEMPLATE_CONFIG', template, x, y);
-                    }
-                }
-            }
-            
-            function createTask(type, template, x, y) {
-                taskCounter++;
-                const task = {
-                    id: 'task_' + taskCounter,
-                    name: template ? template.name : 'New ' + type,
-                    type: type,
-                    status: 'PENDING',
-                    parameters: {},
-                    templateId: template ? template.id : null,
-                    positionX: Math.max(0, Math.min(x, 800)),
-                    positionY: Math.max(0, Math.min(y, 500))
-                };
-                
-                // Set default parameters
-                setDefaultParameters(task, template);
-                
-                currentWorkflow.tasks.push(task);
-                renderTask(task);
-                selectTask(task);
-            }
-            
-            function setDefaultParameters(task, template) {
-                switch(task.type) {
-                    case 'DEVICE_CONFIG':
-                        task.parameters = {
-                            device_type: 'cisco_ios',
-                            host: '192.168.1.1',
-                            username: 'admin',
-                            password: 'password',
-                            config_commands: 'show version'
-                        };
-                        break;
-                    case 'TEMPLATE_CONFIG':
-                        task.parameters = {
-                            device_type: template ? template.deviceType : 'cisco_ios',
-                            host: '192.168.1.1',
-                            username: 'admin',
-                            password: 'password'
-                        };
-                        if (template) {
-                            template.parameters.forEach(function(param) {
-                                if (param.defaultValue) {
-                                    task.parameters[param.name] = param.defaultValue;
-                                }
-                            });
-                        }
-                        break;
-                    case 'VARIABLE_SET':
-                        task.parameters = {
-                            variable_name: 'my_variable',
-                            variable_value: 'default_value'
-                        };
-                        break;
-                    case 'CONDITION':
-                        task.parameters = {
-                            condition: '${variable} == "value"'
-                        };
-                        break;
-                }
-            }
-            
-            function renderWorkflow() {
-                $('#workflow-canvas').empty();
-                
-                if (currentWorkflow.tasks) {
-                    currentWorkflow.tasks.forEach(function(task) {
-                        renderTask(task);
-                    });
-                }
-                
-                if (currentWorkflow.connections) {
-                    currentWorkflow.connections.forEach(function(connection) {
-                        renderConnection(connection);
-                    });
-                }
-            }
-            
-            function renderTask(task) {
-                const taskElement = $(`
-                    <div class="task-node task-type-${task.type} task-status-${task.status}" 
-                         id="task-${task.id}" 
-                         data-task-id="${task.id}"
-                         style="left: ${task.positionX}px; top: ${task.positionY}px;">
-                        <div class="task-icon mb-1">
-                            ${getTaskIcon(task.type)}
-                        </div>
-                        <div class="task-name">
-                            <strong>${escapeHtml(task.name)}</strong>
-                        </div>
-                        <div class="task-type">
-                            <small class="text-muted">${task.type}</small>
-                        </div>
-                        <div class="task-actions mt-2">
-                            <button class="btn btn-sm btn-outline-primary" onclick="editTask('${task.id}')" title="Edit">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button class="btn btn-sm btn-outline-success" onclick="connectTask('${task.id}')" title="Connect">
-                                <i class="fas fa-link"></i>
-                            </button>
-                            <button class="btn btn-sm btn-outline-warning" onclick="insertTaskAfter('${task.id}')" title="Insert After">
-                                <i class="fas fa-plus"></i>
-                            </button>
-                            <button class="btn btn-sm btn-outline-danger" onclick="deleteTask('${task.id}')" title="Delete">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
-                    </div>
-                `);
-                
-                taskElement.on('click', function(e) {
-                    e.stopPropagation();
-                    selectTask(task);
-                    
-                    if (connectMode) {
-                        if (connectSourceTask && connectSourceTask.id !== task.id) {
-                            createConnection(connectSourceTask, task);
-                            exitConnectMode();
-                        }
-                    }
-                });
-                
-                $('#workflow-canvas').append(taskElement);
-            }
-            
-            function getTaskIcon(type) {
-                switch(type) {
-                    case 'DEVICE_CONFIG': return '<i class="fas fa-server text-primary"></i>';
-                    case 'TEMPLATE_CONFIG': return '<i class="fas fa-file-code text-success"></i>';
-                    case 'CONDITION': return '<i class="fas fa-question-circle text-warning"></i>';
-                    case 'VARIABLE_SET': return '<i class="fas fa-cog text-info"></i>';
-                    case 'SCRIPT_EXECUTION': return '<i class="fas fa-code text-secondary"></i>';
-                    default: return '<i class="fas fa-circle"></i>';
-                }
-            }
-            
-            function selectTask(task) {
-                $('.task-node').removeClass('selected');
-                selectedTask = task;
-                
-                if (task) {
-                    $(`#task-${task.id}`).addClass('selected');
-                    showTaskProperties(task);
-                } else {
-                    showWorkflowProperties();
-                }
-            }
-            
-            function showTaskProperties(task) {
-                const properties = `
-                    <div class="mb-3">
-                        <h6>Task Information</h6>
-                        <p><strong>Name:</strong> ${escapeHtml(task.name)}</p>
-                        <p><strong>Type:</strong> ${task.type}</p>
-                        <p><strong>Status:</strong> <span class="badge bg-${getStatusColor(task.status)}">${task.status}</span></p>
-                        <p><strong>ID:</strong> <code>${task.id}</code></p>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <h6>Parameters</h6>
-                        <div class="table-responsive">
-                            <table class="table table-sm">
-                                ${Object.entries(task.parameters || {}).map(([key, value]) => `
-                                    <tr>
-                                        <td><small><strong>${key}</strong></small></td>
-                                        <td><small>${escapeHtml(String(value))}</small></td>
-                                    </tr>
-                                `).join('')}
-                            </table>
-                        </div>
-                    </div>
-                    
-                    <div class="d-grid gap-2">
-                        <button class="btn btn-primary btn-sm" onclick="editTask('${task.id}')">
-                            <i class="fas fa-edit me-1"></i>Edit Task
-                        </button>
-                        <button class="btn btn-success btn-sm" onclick="connectTask('${task.id}')">
-                            <i class="fas fa-link me-1"></i>Connect Task
-                        </button>
-                        <button class="btn btn-warning btn-sm" onclick="insertTaskAfter('${task.id}')">
-                            <i class="fas fa-plus me-1"></i>Insert After
-                        </button>
-                        <button class="btn btn-danger btn-sm" onclick="deleteTask('${task.id}')">
-                            <i class="fas fa-trash me-1"></i>Delete Task
-                        </button>
-                    </div>
-                `;
-                $('#properties-panel').html(properties);
-            }
-            
-            function showWorkflowProperties() {
-                const properties = `
-                    <div class="mb-3">
-                        <h6>Workflow Information</h6>
-                        <p><strong>Name:</strong> ${escapeHtml(currentWorkflow.name)}</p>
-                        <p><strong>Status:</strong> <span class="badge bg-${getStatusColor(currentWorkflow.status)}">${currentWorkflow.status}</span></p>
-                        <p><strong>Tasks:</strong> ${currentWorkflow.tasks.length}</p>
-                        <p><strong>Connections:</strong> ${currentWorkflow.connections.length}</p>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <h6>Global Variables</h6>
-                        <div class="table-responsive">
-                            <table class="table table-sm">
-                                ${Object.entries(currentWorkflow.globalVariables || {}).map(([key, value]) => `
-                                    <tr>
-                                        <td><small><strong>${key}</strong></small></td>
-                                        <td><small>${escapeHtml(String(value))}</small></td>
-                                    </tr>
-                                `).join('')}
-                            </table>
-                        </div>
-                    </div>
-                    
-                    <div class="d-grid gap-2">
-                        <button class="btn btn-success btn-sm" onclick="saveWorkflow()">
-                            <i class="fas fa-save me-1"></i>Save Workflow
-                        </button>
-                        <button class="btn btn-primary btn-sm" onclick="executeWorkflow()">
-                            <i class="fas fa-play me-1"></i>Execute Workflow
-                        </button>
-                        <button class="btn btn-info btn-sm" onclick="validateWorkflow()">
-                            <i class="fas fa-check-circle me-1"></i>Validate
-                        </button>
-                    </div>
-                `;
-                $('#properties-panel').html(properties);
-            }
-            
-            function updateWorkflowDisplay() {
-                $('#workflow-name').text(currentWorkflow.name);
-                document.title = currentWorkflow.name + ' - Network Workflow Builder';
-            }
-            
-            function editTask(taskId) {
-                const task = currentWorkflow.tasks.find(t => t.id === taskId);
-                if (task) {
-                    showTaskEditModal(task);
-                }
-            }
-            
-            function deleteTask(taskId) {
-                if (confirm('Are you sure you want to delete this task?')) {
-                    currentWorkflow.tasks = currentWorkflow.tasks.filter(t => t.id !== taskId);
-                    currentWorkflow.connections = currentWorkflow.connections.filter(
-                        c => c.sourceTaskId !== taskId && c.targetTaskId !== taskId
-                    );
-                    
-                    $(`#task-${taskId}`).remove();
-                    
-                    if (selectedTask && selectedTask.id === taskId) {
-                        selectTask(null);
-                    }
-                }
-            }
-            
-            function connectTask(taskId) {
-                const task = currentWorkflow.tasks.find(t => t.id === taskId);
-                if (task) {
-                    if (!connectMode) {
-                        enterConnectMode(task);
-                    } else {
-                        exitConnectMode();
-                    }
-                }
-            }
-            
-            function enterConnectMode(sourceTask) {
-                connectMode = true;
-                connectSourceTask = sourceTask;
-                $('#workflow-canvas').css('cursor', 'crosshair');
-                showAlert('Click on a target task to create connection', 'info');
-            }
-            
-            function exitConnectMode() {
-                connectMode = false;
-                connectSourceTask = null;
-                $('#workflow-canvas').css('cursor', 'default');
-            }
-            
-            function createConnection(sourceTask, targetTask) {
-                const connection = {
-                    sourceTaskId: sourceTask.id,
-                    targetTaskId: targetTask.id,
-                    type: 'NORMAL'
-                };
-                
-                currentWorkflow.connections.push(connection);
-                renderConnection(connection);
-                showAlert('Connection created successfully', 'success');
-            }
-            
-            function renderConnection(connection) {
-                // Create SVG line for connection visualization
-                const sourceElement = document.getElementById('task-' + connection.sourceTaskId);
-                const targetElement = document.getElementById('task-' + connection.targetTaskId);
-                
-                if (sourceElement && targetElement) {
-                    const canvas = document.getElementById('workflow-canvas');
-                    
-                    // Remove existing connection if any
-                    const existingConnection = document.getElementById('connection-' + connection.sourceTaskId + '-' + connection.targetTaskId);
-                    if (existingConnection) {
-                        existingConnection.remove();
-                    }
-                    
-                    // Calculate positions
-                    const sourceRect = sourceElement.getBoundingClientRect();
-                    const targetRect = targetElement.getBoundingClientRect();
-                    const canvasRect = canvas.getBoundingClientRect();
-                    
-                    const sourceX = sourceRect.left + sourceRect.width / 2 - canvasRect.left;
-                    const sourceY = sourceRect.bottom - canvasRect.top;
-                    const targetX = targetRect.left + targetRect.width / 2 - canvasRect.left;
-                    const targetY = targetRect.top - canvasRect.top;
-                    
-                    // Create SVG element
-                    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-                    svg.setAttribute('id', 'connection-' + connection.sourceTaskId + '-' + connection.targetTaskId);
-                    svg.style.position = 'absolute';
-                    svg.style.top = '0';
-                    svg.style.left = '0';
-                    svg.style.width = '100%';
-                    svg.style.height = '100%';
-                    svg.style.pointerEvents = 'none';
-                    svg.style.zIndex = '5';
-                    
-                    // Create line
-                    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-                    line.setAttribute('x1', sourceX);
-                    line.setAttribute('y1', sourceY);
-                    line.setAttribute('x2', targetX);
-                    line.setAttribute('y2', targetY);
-                    line.setAttribute('stroke', '#007bff');
-                    line.setAttribute('stroke-width', '2');
-                    line.setAttribute('marker-end', 'url(#arrowhead)');
-                    
-                    // Create arrow marker
-                    const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-                    const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
-                    marker.setAttribute('id', 'arrowhead');
-                    marker.setAttribute('markerWidth', '10');
-                    marker.setAttribute('markerHeight', '7');
-                    marker.setAttribute('refX', '9');
-                    marker.setAttribute('refY', '3.5');
-                    marker.setAttribute('orient', 'auto');
-                    
-                    const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-                    polygon.setAttribute('points', '0 0, 10 3.5, 0 7');
-                    polygon.setAttribute('fill', '#007bff');
-                    
-                    marker.appendChild(polygon);
-                    defs.appendChild(marker);
-                    svg.appendChild(defs);
-                    svg.appendChild(line);
-                    
-                    canvas.appendChild(svg);
-                }
-            }
-            
-            function insertTaskAfter(taskId) {
-                const task = currentWorkflow.tasks.find(t => t.id === taskId);
-                if (task) {
-                    $('#insert-after-task').val(task.name);
-                    $('#insert-task-name').val('');
-                    $('#insertTaskModal').modal('show');
-                    $('#insertTaskModal').data('after-task-id', taskId);
-                }
-            }
-            
-            function insertTask() {
-                const afterTaskId = $('#insertTaskModal').data('after-task-id');
-                const taskType = $('#insert-task-type').val();
-                const taskName = $('#insert-task-name').val();
-                
-                if (!taskName.trim()) {
-                    showAlert('Please enter a task name', 'warning');
-                    return;
-                }
-                
-                const newTask = {
-                    name: taskName,
-                    type: taskType
-                };
-                
-                $.ajax({
-                    url: `/api/workflows/${currentWorkflow.id}/tasks/${afterTaskId}/insert-after`,
-                    method: 'POST',
-                    contentType: 'application/json',
-                    data: JSON.stringify(newTask),
-                    success: function(data) {
-                        $('#insertTaskModal').modal('hide');
-                        loadWorkflow(currentWorkflow.id); // Reload to show changes
-                        showAlert('Task inserted successfully', 'success');
-                    },
-                    error: function() {
-                        showAlert('Failed to insert task', 'danger');
-                    }
-                });
-            }
-            
-            function saveWorkflow() {
-                if (!currentWorkflow.id) {
-                    // Create new workflow
-                    $.ajax({
-                        url: '/api/workflows',
-                        method: 'POST',
-                        contentType: 'application/json',
-                        data: JSON.stringify(currentWorkflow),
-                        success: function(data) {
-                            currentWorkflow = data;
-                            history.replaceState(null, null, '/workflows/' + data.id);
-                            showAlert('Workflow created successfully', 'success');
-                        },
-                        error: function() {
-                            showAlert('Failed to create workflow', 'danger');
-                        }
-                    });
-                } else {
-                    // Update existing workflow
-                    $.ajax({
-                        url: '/api/workflows/' + currentWorkflow.id,
-                        method: 'PUT',
-                        contentType: 'application/json',
-                        data: JSON.stringify(currentWorkflow),
-                        success: function(data) {
-                            showAlert('Workflow saved successfully', 'success');
-                        },
-                        error: function() {
-                            showAlert('Failed to save workflow', 'danger');
-                        }
-                    });
-                }
-            }
-            
-            function executeWorkflow() {
-                if (!currentWorkflow.id) {
-                    showAlert('Please save the workflow before executing', 'warning');
-                    return;
-                }
-                
-                if (confirm('Are you sure you want to execute this workflow?')) {
-                    $.post('/api/workflows/' + currentWorkflow.id + '/execute')
-                        .done(function(response) {
-                            showAlert('Workflow execution started', 'success');
-                            // Optionally reload to show updated status
-                        })
-                        .fail(function() {
-                            showAlert('Failed to execute workflow', 'danger');
-                        });
-                }
-            }
-            
-            function validateWorkflow() {
-                let errors = [];
-                
-                if (currentWorkflow.tasks.length === 0) {
-                    errors.push('Workflow must have at least one task');
-                }
-                
-                // Add more validation logic here
-                
-                if (errors.length === 0) {
-                    showAlert('Workflow is valid', 'success');
-                } else {
-                    showAlert('Validation errors: ' + errors.join(', '), 'warning');
-                }
-            }
-            
-            function clearCanvas() {
-                if (confirm('Are you sure you want to clear the canvas? This will remove all tasks and connections.')) {
-                    currentWorkflow.tasks = [];
-                    currentWorkflow.connections = [];
-                    $('#workflow-canvas').empty();
+        }
+        
+        function setupDragAndDrop() {
+            // Basic drag and drop placeholder - can be enhanced
+            console.log('Drag and drop functionality initialized');
+        }
+        
+        function setupCanvasEvents() {
+            $('#workflow-canvas').on('click', function(e) {
+                if (e.target === this) {
                     selectTask(null);
                 }
-            }
+            });
+        }
+        
+        function renderWorkflow() {
+            $('#workflow-canvas').empty();
             
-            function updateTaskPosition(taskElement) {
-                const taskId = taskElement.getAttribute('data-task-id');
-                const task = currentWorkflow.tasks.find(t => t.id === taskId);
-                if (task) {
-                    const rect = taskElement.getBoundingClientRect();
-                    const canvasRect = $('#workflow-canvas')[0].getBoundingClientRect();
-                    task.positionX = rect.left - canvasRect.left;
-                    task.positionY = rect.top - canvasRect.top;
-                    
-                    // Update connections that involve this task
-                    updateConnectionsForTask(taskId);
-                }
-            }
-            
-            function updateConnectionsForTask(taskId) {
-                // Find all connections involving this task
-                const connectionsToUpdate = currentWorkflow.connections.filter(
-                    conn => conn.sourceTaskId === taskId || conn.targetTaskId === taskId
-                );
-                
-                // Re-render these connections
-                connectionsToUpdate.forEach(connection => {
-                    renderConnection(connection);
+            if (currentWorkflow.tasks) {
+                currentWorkflow.tasks.forEach(function(task) {
+                    renderTask(task);
                 });
             }
-            
-            // Utility functions
-            function getStatusColor(status) {
-                switch(status) {
-                    case 'DRAFT': return 'secondary';
-                    case 'READY': return 'primary';
-                    case 'RUNNING': return 'warning';
-                    case 'COMPLETED': return 'success';
-                    case 'FAILED': return 'danger';
-                    case 'PAUSED': return 'info';
-                    default: return 'secondary';
-                }
-            }
-            
-            function escapeHtml(unsafe) {
-                return unsafe
-                    .replace(/&/g, "&amp;")
-                    .replace(/</g, "&lt;")
-                    .replace(/>/g, "&gt;")
-                    .replace(/"/g, "&quot;")
-                    .replace(/'/g, "&#039;");
-            }
-            
-            function showAlert(message, type) {
-                const alertHtml = `
-                    <div class="alert alert-${type} alert-dismissible fade show" role="alert">
-                        ${message}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        }
+        
+        function renderTask(task) {
+            const taskElement = $(`
+                <div class="task-node task-type-${task.type} task-status-${task.status}" 
+                     id="task-${task.id}" 
+                     data-task-id="${task.id}"
+                     style="left: ${task.positionX}px; top: ${task.positionY}px;">
+                    <div class="task-icon mb-1">
+                        ${getTaskIcon(task.type)}
                     </div>
-                `;
-                $('#alert-container').html(alertHtml);
+                    <div class="task-name">
+                        <strong>${escapeHtml(task.name)}</strong>
+                    </div>
+                    <div class="task-type">
+                        <small class="text-muted">${task.type}</small>
+                    </div>
+                </div>
+            `);
+            
+            taskElement.on('click', function(e) {
+                e.stopPropagation();
+                selectTask(task);
+            });
+            
+            $('#workflow-canvas').append(taskElement);
+        }
+        
+        function getTaskIcon(type) {
+            switch(type) {
+                case 'DEVICE_CONFIG': return '<i class="fas fa-server text-primary"></i>';
+                case 'TEMPLATE_CONFIG': return '<i class="fas fa-file-code text-success"></i>';
+                case 'CONDITION': return '<i class="fas fa-question-circle text-warning"></i>';
+                case 'VARIABLE_SET': return '<i class="fas fa-cog text-info"></i>';
+                case 'SCRIPT_EXECUTION': return '<i class="fas fa-code text-secondary"></i>';
+                default: return '<i class="fas fa-circle"></i>';
+            }
+        }
+        
+        function selectTask(task) {
+            $('.task-node').removeClass('selected');
+            selectedTask = task;
+            
+            if (task) {
+                $(`#task-${task.id}`).addClass('selected');
+                showTaskProperties(task);
+            } else {
+                showWorkflowProperties();
+            }
+        }
+        
+        function showTaskProperties(task) {
+            const properties = `
+                <div class="mb-3">
+                    <h6>Task Information</h6>
+                    <p><strong>Name:</strong> ${escapeHtml(task.name)}</p>
+                    <p><strong>Type:</strong> ${task.type}</p>
+                    <p><strong>Status:</strong> <span class="badge bg-${getStatusColor(task.status)}">${task.status}</span></p>
+                    <p><strong>ID:</strong> <code>${task.id}</code></p>
+                </div>
                 
-                setTimeout(function() {
-                    $('.alert').alert('close');
-                }, 5000);
+                <div class="mb-3">
+                    <h6>Parameters</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            ${Object.entries(task.parameters || {}).map(([key, value]) => `
+                                <tr>
+                                    <td><small><strong>${key}</strong></small></td>
+                                    <td><small>${escapeHtml(String(value))}</small></td>
+                                </tr>
+                            `).join('')}
+                        </table>
+                    </div>
+                </div>
+            `;
+            $('#properties-panel').html(properties);
+        }
+        
+        function showWorkflowProperties() {
+            const properties = `
+                <div class="mb-3">
+                    <h6>Workflow Information</h6>
+                    <p><strong>Name:</strong> ${escapeHtml(currentWorkflow.name)}</p>
+                    <p><strong>Status:</strong> <span class="badge bg-${getStatusColor(currentWorkflow.status)}">${currentWorkflow.status}</span></p>
+                    <p><strong>Tasks:</strong> ${currentWorkflow.tasks.length}</p>
+                    <p><strong>Connections:</strong> ${currentWorkflow.connections.length}</p>
+                </div>
+                
+                <div class="d-grid gap-2">
+                    <button class="btn btn-success btn-sm" onclick="saveWorkflow()">
+                        <i class="fas fa-save me-1"></i>Save Workflow
+                    </button>
+                    <button class="btn btn-primary btn-sm" onclick="executeWorkflow()">
+                        <i class="fas fa-play me-1"></i>Execute Workflow
+                    </button>
+                    <button class="btn btn-info btn-sm" onclick="validateWorkflow()">
+                        <i class="fas fa-check-circle me-1"></i>Validate
+                    </button>
+                </div>
+            `;
+            $('#properties-panel').html(properties);
+        }
+        
+        function updateWorkflowDisplay() {
+            $('#workflow-name').text(currentWorkflow.name);
+            document.title = currentWorkflow.name + ' - Network Workflow Builder';
+        }
+        
+        function saveWorkflow() {
+            if (!currentWorkflow.id) {
+                // Create new workflow
+                $.ajax({
+                    url: '/api/workflows',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(currentWorkflow),
+                    success: function(data) {
+                        currentWorkflow = data;
+                        history.replaceState(null, null, '/workflows/' + data.id);
+                        showAlert('Workflow created successfully', 'success');
+                    },
+                    error: function() {
+                        showAlert('Failed to create workflow', 'danger');
+                    }
+                });
+            } else {
+                // Update existing workflow
+                $.ajax({
+                    url: '/api/workflows/' + currentWorkflow.id,
+                    method: 'PUT',
+                    contentType: 'application/json',
+                    data: JSON.stringify(currentWorkflow),
+                    success: function(data) {
+                        showAlert('Workflow saved successfully', 'success');
+                    },
+                    error: function() {
+                        showAlert('Failed to save workflow', 'danger');
+                    }
+                });
+            }
+        }
+        
+        function executeWorkflow() {
+            if (!currentWorkflow.id) {
+                showAlert('Please save the workflow before executing', 'warning');
+                return;
             }
             
-            // Initialize on page load
-            selectTask(null);
-        </script>
-    </th:block>
+            if (confirm('Are you sure you want to execute this workflow?')) {
+                $.post('/api/workflows/' + currentWorkflow.id + '/execute')
+                    .done(function(response) {
+                        showAlert('Workflow execution started', 'success');
+                    })
+                    .fail(function() {
+                        showAlert('Failed to execute workflow', 'danger');
+                    });
+            }
+        }
+        
+        function validateWorkflow() {
+            let errors = [];
+            
+            if (currentWorkflow.tasks.length === 0) {
+                errors.push('Workflow must have at least one task');
+            }
+            
+            if (errors.length === 0) {
+                showAlert('Workflow is valid', 'success');
+            } else {
+                showAlert('Validation errors: ' + errors.join(', '), 'warning');
+            }
+        }
+        
+        function clearCanvas() {
+            if (confirm('Are you sure you want to clear the canvas? This will remove all tasks and connections.')) {
+                currentWorkflow.tasks = [];
+                currentWorkflow.connections = [];
+                $('#workflow-canvas').empty();
+                selectTask(null);
+            }
+        }
+        
+        // Utility functions
+        function getStatusColor(status) {
+            switch(status) {
+                case 'DRAFT': return 'secondary';
+                case 'READY': return 'primary';
+                case 'RUNNING': return 'warning';
+                case 'COMPLETED': return 'success';
+                case 'FAILED': return 'danger';
+                case 'PAUSED': return 'info';
+                default: return 'secondary';
+            }
+        }
+        
+        function escapeHtml(unsafe) {
+            if (!unsafe) return '';
+            return unsafe.toString()
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+        
+        function showAlert(message, type) {
+            const alertHtml = `
+                <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+            $('#alert-container').html(alertHtml);
+            
+            setTimeout(function() {
+                $('.alert').alert('close');
+            }, 5000);
+        }
+        
+        // Initialize on page load
+        selectTask(null);
+    </script>
 </body>
 </html>
