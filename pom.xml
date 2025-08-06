@@ -96,12 +96,7 @@
             <version>6.4.2</version>
         </dependency>
 
-        <!-- JointJS for workflow diagram -->
-        <dependency>
-            <groupId>org.webjars.npm</groupId>
-            <artifactId>jointjs</artifactId>
-            <version>3.7.0</version>
-        </dependency>
+        <!-- JointJS will be loaded via CDN instead -->
 
         <!-- Development tools -->
         <dependency>

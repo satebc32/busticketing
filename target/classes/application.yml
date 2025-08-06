@@ -1,0 +1,99 @@
+spring:
+  application:
+    name: network-workflow-builder
+  
+  # Thymeleaf configuration
+  thymeleaf:
+    mode: HTML
+    encoding: UTF-8
+    suffix: .html
+    cache: false
+    
+  # Database configuration (H2 for development)
+  datasource:
+    url: jdbc:h2:mem:workflow
+    driverClassName: org.h2.Driver
+    username: sa
+    password: password
+    
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+      
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        
+  # Web configuration
+  web:
+    resources:
+      cache:
+        period: 0
+        
+  # WebSocket configuration
+  websocket:
+    message-size-limit: 1024
+    send-buffer-size-limit: 1024
+    
+  # JSON configuration
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    default-property-inclusion: non_null
+
+# Server configuration
+server:
+  port: 8080
+  servlet:
+    context-path: /
+  compression:
+    enabled: true
+    mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json
+    
+# Logging configuration
+logging:
+  level:
+    com.networkflow: DEBUG
+    org.springframework.web: INFO
+    org.springframework.websocket: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/workflow-builder.log
+    
+# Management endpoints
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+      
+# Application specific configuration
+workflow:
+  execution:
+    thread-pool-size: 10
+    timeout-seconds: 300
+  python:
+    executable: python3
+    script-path: python/netmiko_executor.py
+  templates:
+    directory: templates
+    auto-load: true
+  storage:
+    type: memory # Options: memory, database, file
+    backup-enabled: true
+    
+# WebJars configuration
+webjars:
+  locator-cache:
+    enabled: true
