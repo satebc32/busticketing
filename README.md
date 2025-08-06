@@ -67,6 +67,30 @@ mvn package
 java -jar target/device-config-workflow-1.0.0.jar
 ```
 
+## ✅ **Solution to Dependency Issue**
+
+The issue with `org.webjars.npm:jointjs:jar:3.7.0` was resolved by:
+
+1. **Removing the problematic WebJar dependency** from `pom.xml`
+2. **Using CDN instead** - Loading JointJS directly from CDN in the HTML templates
+3. **Cleaned up old JavaFX files** that were causing compilation conflicts
+
+The dependency was changed from:
+```xml
+<dependency>
+    <groupId>org.webjars.npm</groupId>
+    <artifactId>jointjs</artifactId>
+    <version>3.7.0</version>
+</dependency>
+```
+
+To CDN loading in HTML:
+```html
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jointjs/3.7.0/joint.min.js"></script>
+```
+
+This approach provides better performance and avoids dependency resolution issues.
+
 ## Usage
 
 ### Creating a Workflow
