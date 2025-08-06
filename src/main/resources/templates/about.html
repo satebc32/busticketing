@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout/base :: layout}">
+<body>
+    <div th:fragment="content">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <!-- Header -->
+                <div class="text-center mb-5">
+                    <i class="fas fa-project-diagram fa-4x text-primary mb-3"></i>
+                    <h1 class="display-4">Network Workflow Builder</h1>
+                    <p class="lead text-muted">Web-based drag-and-drop workflow builder for network device configuration</p>
+                </div>
+
+                <!-- Features -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-star me-2 text-warning"></i>Key Features
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <ul class="list-unstyled">
+                                    <li class="mb-2">
+                                        <i class="fas fa-check text-success me-2"></i>
+                                        <strong>Drag & Drop Interface:</strong> Visual workflow builder
+                                    </li>
+                                    <li class="mb-2">
+                                        <i class="fas fa-check text-success me-2"></i>
+                                        <strong>Template System:</strong> Reusable configuration templates
+                                    </li>
+                                    <li class="mb-2">
+                                        <i class="fas fa-check text-success me-2"></i>
+                                        <strong>Dynamic Task Insertion:</strong> Insert tasks anywhere in workflow
+                                    </li>
+                                    <li class="mb-2">
+                                        <i class="fas fa-check text-success me-2"></i>
+                                        <strong>Real-time Updates:</strong> WebSocket-based live updates
+                                    </li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <ul class="list-unstyled">
+                                    <li class="mb-2">
+                                        <i class="fas fa-check text-success me-2"></i>
+                                        <strong>Netmiko Integration:</strong> Execute CLI commands on devices
+                                    </li>
+                                    <li class="mb-2">
+                                        <i class="fas fa-check text-success me-2"></i>
+                                        <strong>Multi-Device Support:</strong> Cisco, Arista, Juniper, and more
+                                    </li>
+                                    <li class="mb-2">
+                                        <i class="fas fa-check text-success me-2"></i>
+                                        <strong>Variable Management:</strong> Dynamic variable substitution
+                                    </li>
+                                    <li class="mb-2">
+                                        <i class="fas fa-check text-success me-2"></i>
+                                        <strong>REST API:</strong> Complete API for automation
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Technical Stack -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-cogs me-2 text-primary"></i>Technical Stack
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>Backend</h6>
+                                <ul class="list-unstyled mb-3">
+                                    <li><i class="fab fa-java me-2 text-warning"></i>Java 17</li>
+                                    <li><i class="fas fa-leaf me-2 text-success"></i>Spring Boot 3.2</li>
+                                    <li><i class="fas fa-database me-2 text-info"></i>Spring Data JPA</li>
+                                    <li><i class="fas fa-plug me-2 text-primary"></i>WebSocket (STOMP)</li>
+                                </ul>
+                                
+                                <h6>Python Integration</h6>
+                                <ul class="list-unstyled">
+                                    <li><i class="fab fa-python me-2 text-primary"></i>Python 3.7+</li>
+                                    <li><i class="fas fa-network-wired me-2 text-success"></i>Netmiko</li>
+                                    <li><i class="fas fa-shield-alt me-2 text-warning"></i>Paramiko</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>Frontend</h6>
+                                <ul class="list-unstyled mb-3">
+                                    <li><i class="fab fa-html5 me-2 text-danger"></i>HTML5 / Thymeleaf</li>
+                                    <li><i class="fab fa-css3-alt me-2 text-primary"></i>CSS3 / Bootstrap 5</li>
+                                    <li><i class="fab fa-js me-2 text-warning"></i>JavaScript ES6+</li>
+                                    <li><i class="fas fa-hand-rock me-2 text-info"></i>Dragula.js (Drag & Drop)</li>
+                                </ul>
+                                
+                                <h6>Build & Deployment</h6>
+                                <ul class="list-unstyled">
+                                    <li><i class="fas fa-tools me-2 text-secondary"></i>Maven</li>
+                                    <li><i class="fas fa-rocket me-2 text-success"></i>Spring Boot JAR</li>
+                                    <li><i class="fab fa-docker me-2 text-primary"></i>Docker Ready</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Supported Devices -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-server me-2 text-info"></i>Supported Network Devices
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <h6>Cisco</h6>
+                                <ul class="list-unstyled">
+                                    <li>• IOS / IOS-XE</li>
+                                    <li>• NX-OS</li>
+                                    <li>• ASA</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-4">
+                                <h6>Other Vendors</h6>
+                                <ul class="list-unstyled">
+                                    <li>• Arista EOS</li>
+                                    <li>• Juniper JunOS</li>
+                                    <li>• HP Comware</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-4">
+                                <h6>Additional</h6>
+                                <ul class="list-unstyled">
+                                    <li>• Huawei</li>
+                                    <li>• Fortinet</li>
+                                    <li>• Palo Alto PAN-OS</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- API Information -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-code me-2 text-success"></i>REST API Endpoints
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Method</th>
+                                        <th>Endpoint</th>
+                                        <th>Description</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><span class="badge bg-primary">GET</span></td>
+                                        <td><code>/api/workflows</code></td>
+                                        <td>List all workflows</td>
+                                    </tr>
+                                    <tr>
+                                        <td><span class="badge bg-success">POST</span></td>
+                                        <td><code>/api/workflows</code></td>
+                                        <td>Create new workflow</td>
+                                    </tr>
+                                    <tr>
+                                        <td><span class="badge bg-warning">PUT</span></td>
+                                        <td><code>/api/workflows/{id}</code></td>
+                                        <td>Update workflow</td>
+                                    </tr>
+                                    <tr>
+                                        <td><span class="badge bg-success">POST</span></td>
+                                        <td><code>/api/workflows/{id}/execute</code></td>
+                                        <td>Execute workflow</td>
+                                    </tr>
+                                    <tr>
+                                        <td><span class="badge bg-success">POST</span></td>
+                                        <td><code>/api/workflows/{id}/tasks/{taskId}/insert-after</code></td>
+                                        <td>Insert task after another task</td>
+                                    </tr>
+                                    <tr>
+                                        <td><span class="badge bg-primary">GET</span></td>
+                                        <td><code>/api/templates</code></td>
+                                        <td>List all templates</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Version Information -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-info-circle me-2 text-info"></i>Version Information
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>Version:</strong> 1.0.0</p>
+                                <p><strong>Build:</strong> Spring Boot Web Application</p>
+                                <p><strong>License:</strong> MIT License</p>
+                            </div>
+                            <div class="col-md-6">
+                                <p><strong>Created:</strong> 2024</p>
+                                <p><strong>Architecture:</strong> Web-based Microservice</p>
+                                <p><strong>Platform:</strong> Cross-platform (JVM)</p>
+                            </div>
+                        </div>
+                        
+                        <hr>
+                        
+                        <div class="text-center">
+                            <p class="text-muted mb-0">
+                                <i class="fas fa-heart text-danger me-1"></i>
+                                Built with passion for network automation
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

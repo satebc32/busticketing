@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout/base :: layout}">
+<body>
+    <div th:fragment="content">
+        <div class="row">
+            <div class="col-lg-12">
+                <!-- Action Bar -->
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col-md-6">
+                                <div class="btn-group" role="group">
+                                    <button type="button" class="btn btn-primary" onclick="createNewWorkflow()">
+                                        <i class="fas fa-plus me-1"></i>New Workflow
+                                    </button>
+                                    <button type="button" class="btn btn-success" onclick="createSampleWorkflow()">
+                                        <i class="fas fa-magic me-1"></i>Create Sample
+                                    </button>
+                                    <button type="button" class="btn btn-info" onclick="refreshWorkflows()">
+                                        <i class="fas fa-sync me-1"></i>Refresh
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="searchInput" placeholder="Search workflows...">
+                                    <button class="btn btn-outline-secondary" type="button" onclick="searchWorkflows()">
+                                        <i class="fas fa-search"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Workflows Table -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-sitemap me-2"></i>Workflows
+                            <span class="badge bg-secondary ms-2" id="workflow-count">0</span>
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover" id="workflows-table">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Description</th>
+                                        <th>Status</th>
+                                        <th>Tasks</th>
+                                        <th>Last Modified</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="workflows-tbody">
+                                    <tr id="loading-row">
+                                        <td colspan="6" class="text-center py-4">
+                                            <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                                            Loading workflows...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Workflow Details Modal -->
+        <div class="modal fade" id="workflowModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Workflow Details</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body" id="workflow-details">
+                        <!-- Workflow details will be loaded here -->
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-primary" id="edit-workflow-btn">Edit Workflow</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- New Workflow Modal -->
+        <div class="modal fade" id="newWorkflowModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Create New Workflow</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="new-workflow-form">
+                            <div class="mb-3">
+                                <label for="workflow-name" class="form-label">Workflow Name</label>
+                                <input type="text" class="form-control" id="workflow-name" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="workflow-description" class="form-label">Description</label>
+                                <textarea class="form-control" id="workflow-description" rows="3"></textarea>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-primary" onclick="saveNewWorkflow()">Create</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <th:block th:fragment="scripts-extra">
+        <script>
+            let workflows = [];
+
+            $(document).ready(function() {
+                loadWorkflows();
+                
+                // Search functionality
+                $('#searchInput').on('keyup', function() {
+                    searchWorkflows();
+                });
+            });
+
+            function loadWorkflows() {
+                $.get('/api/workflows')
+                    .done(function(data) {
+                        workflows = data;
+                        renderWorkflows(workflows);
+                        updateWorkflowCount(workflows.length);
+                    })
+                    .fail(function() {
+                        showAlert('Failed to load workflows', 'danger');
+                        $('#workflows-tbody').html('<tr><td colspan="6" class="text-center text-danger">Failed to load workflows</td></tr>');
+                    });
+            }
+
+            function renderWorkflows(workflowList) {
+                const tbody = $('#workflows-tbody');
+                tbody.empty();
+
+                if (workflowList.length === 0) {
+                    tbody.html('<tr><td colspan="6" class="text-center text-muted">No workflows found</td></tr>');
+                    return;
+                }
+
+                workflowList.forEach(function(workflow) {
+                    const row = `
+                        <tr>
+                            <td>
+                                <strong>${escapeHtml(workflow.name)}</strong>
+                            </td>
+                            <td>${escapeHtml(workflow.description || 'No description')}</td>
+                            <td>
+                                <span class="badge bg-${getStatusColor(workflow.status)}">${workflow.status}</span>
+                            </td>
+                            <td>
+                                <span class="badge bg-info">${workflow.tasks ? workflow.tasks.length : 0} tasks</span>
+                            </td>
+                            <td>${formatDate(workflow.lastModified)}</td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-outline-primary" onclick="editWorkflow('${workflow.id}')" title="Edit">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-outline-info" onclick="viewWorkflow('${workflow.id}')" title="View">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-outline-success" onclick="executeWorkflow('${workflow.id}')" title="Execute">
+                                        <i class="fas fa-play"></i>
+                                    </button>
+                                    <button class="btn btn-outline-danger" onclick="deleteWorkflow('${workflow.id}')" title="Delete">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                    tbody.append(row);
+                });
+            }
+
+            function searchWorkflows() {
+                const searchTerm = $('#searchInput').val().toLowerCase();
+                const filtered = workflows.filter(function(workflow) {
+                    return workflow.name.toLowerCase().includes(searchTerm) ||
+                           (workflow.description && workflow.description.toLowerCase().includes(searchTerm));
+                });
+                renderWorkflows(filtered);
+                updateWorkflowCount(filtered.length);
+            }
+
+            function refreshWorkflows() {
+                $('#workflow-count').html('<i class="fas fa-spinner fa-spin"></i>');
+                loadWorkflows();
+            }
+
+            function createNewWorkflow() {
+                $('#new-workflow-form')[0].reset();
+                $('#newWorkflowModal').modal('show');
+            }
+
+            function saveNewWorkflow() {
+                const name = $('#workflow-name').val();
+                const description = $('#workflow-description').val();
+
+                if (!name.trim()) {
+                    showAlert('Please enter a workflow name', 'warning');
+                    return;
+                }
+
+                const workflow = {
+                    name: name,
+                    description: description,
+                    status: 'DRAFT'
+                };
+
+                $.ajax({
+                    url: '/api/workflows',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(workflow),
+                    success: function(data) {
+                        $('#newWorkflowModal').modal('hide');
+                        showAlert('Workflow created successfully', 'success');
+                        window.location.href = '/workflows/' + data.id;
+                    },
+                    error: function() {
+                        showAlert('Failed to create workflow', 'danger');
+                    }
+                });
+            }
+
+            function createSampleWorkflow() {
+                $.post('/api/workflows/sample')
+                    .done(function(data) {
+                        showAlert('Sample workflow created successfully', 'success');
+                        loadWorkflows();
+                    })
+                    .fail(function() {
+                        showAlert('Failed to create sample workflow', 'danger');
+                    });
+            }
+
+            function editWorkflow(id) {
+                window.location.href = '/workflows/' + id;
+            }
+
+            function viewWorkflow(id) {
+                $.get('/api/workflows/' + id)
+                    .done(function(workflow) {
+                        displayWorkflowDetails(workflow);
+                        $('#edit-workflow-btn').off('click').on('click', function() {
+                            window.location.href = '/workflows/' + id;
+                        });
+                        $('#workflowModal').modal('show');
+                    })
+                    .fail(function() {
+                        showAlert('Failed to load workflow details', 'danger');
+                    });
+            }
+
+            function executeWorkflow(id) {
+                if (confirm('Are you sure you want to execute this workflow?')) {
+                    $.post('/api/workflows/' + id + '/execute')
+                        .done(function(response) {
+                            showAlert('Workflow execution started', 'success');
+                            loadWorkflows(); // Refresh to show updated status
+                        })
+                        .fail(function() {
+                            showAlert('Failed to execute workflow', 'danger');
+                        });
+                }
+            }
+
+            function deleteWorkflow(id) {
+                if (confirm('Are you sure you want to delete this workflow? This action cannot be undone.')) {
+                    $.ajax({
+                        url: '/api/workflows/' + id,
+                        method: 'DELETE',
+                        success: function() {
+                            showAlert('Workflow deleted successfully', 'success');
+                            loadWorkflows();
+                        },
+                        error: function() {
+                            showAlert('Failed to delete workflow', 'danger');
+                        }
+                    });
+                }
+            }
+
+            function displayWorkflowDetails(workflow) {
+                const details = `
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Basic Information</h6>
+                            <p><strong>Name:</strong> ${escapeHtml(workflow.name)}</p>
+                            <p><strong>Status:</strong> <span class="badge bg-${getStatusColor(workflow.status)}">${workflow.status}</span></p>
+                            <p><strong>Description:</strong> ${escapeHtml(workflow.description || 'No description')}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Statistics</h6>
+                            <p><strong>Tasks:</strong> ${workflow.tasks ? workflow.tasks.length : 0}</p>
+                            <p><strong>Connections:</strong> ${workflow.connections ? workflow.connections.length : 0}</p>
+                            <p><strong>Created:</strong> ${formatDate(workflow.createdAt)}</p>
+                            <p><strong>Last Modified:</strong> ${formatDate(workflow.lastModified)}</p>
+                        </div>
+                    </div>
+                `;
+                $('#workflow-details').html(details);
+            }
+
+            function updateWorkflowCount(count) {
+                $('#workflow-count').text(count);
+            }
+
+            function getStatusColor(status) {
+                switch(status) {
+                    case 'DRAFT': return 'secondary';
+                    case 'READY': return 'primary';
+                    case 'RUNNING': return 'warning';
+                    case 'COMPLETED': return 'success';
+                    case 'FAILED': return 'danger';
+                    case 'PAUSED': return 'info';
+                    default: return 'secondary';
+                }
+            }
+
+            function formatDate(dateString) {
+                if (!dateString) return 'Unknown';
+                return new Date(dateString).toLocaleString();
+            }
+
+            function escapeHtml(unsafe) {
+                return unsafe
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#039;");
+            }
+
+            function showAlert(message, type) {
+                const alertHtml = `
+                    <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                        ${message}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                `;
+                $('#alert-container').html(alertHtml);
+                
+                // Auto-dismiss after 5 seconds
+                setTimeout(function() {
+                    $('.alert').alert('close');
+                }, 5000);
+            }
+        </script>
+    </th:block>
+</body>
+</html>
