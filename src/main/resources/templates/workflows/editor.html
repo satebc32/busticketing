@@ -9,60 +9,17 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
-    <!-- Dragula CSS for drag and drop -->
-    <link href="https://cdn.jsdelivr.net/npm/dragula@3.7.3/dist/dragula.min.css" rel="stylesheet">
     
-    <!-- Custom workflow editor CSS -->
     <style>
         .workflow-canvas {
             background: #f8f9fa;
             border: 2px dashed #dee2e6;
-            min-height: 600px;
-            position: relative;
-            overflow: auto;
+            min-height: 500px;
             border-radius: 8px;
-        }
-        
-        .task-node {
-            position: absolute;
-            width: 150px;
-            min-height: 80px;
-            padding: 10px;
-            border-radius: 8px;
-            cursor: move;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            transition: all 0.2s ease;
-            z-index: 10;
-        }
-        
-        .task-node:hover {
-            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-            transform: translateY(-2px);
-        }
-        
-        .task-node.selected {
-            border: 2px solid #007bff;
-            box-shadow: 0 0 10px rgba(0,123,255,0.5);
-        }
-        
-        .task-type-DEVICE_CONFIG { background: linear-gradient(135deg, #e3f2fd, #bbdefb); }
-        .task-type-TEMPLATE_CONFIG { background: linear-gradient(135deg, #f3e5f5, #ce93d8); }
-        .task-type-CONDITION { background: linear-gradient(135deg, #fff3e0, #ffcc02); }
-        .task-type-VARIABLE_SET { background: linear-gradient(135deg, #e8f5e8, #a5d6a7); }
-        .task-type-SCRIPT_EXECUTION { background: linear-gradient(135deg, #fce4ec, #f8bbd9); }
-        
-        .task-status-PENDING { border-left: 4px solid #6c757d; }
-        .task-status-RUNNING { border-left: 4px solid #ffc107; }
-        .task-status-COMPLETED { border-left: 4px solid #28a745; }
-        .task-status-FAILED { border-left: 4px solid #dc3545; }
-        
-        .task-palette {
-            max-height: 500px;
-            overflow-y: auto;
         }
         
         .task-palette-item {
-            cursor: grab;
+            cursor: pointer;
             margin-bottom: 10px;
             padding: 15px;
             border: 1px solid #dee2e6;
@@ -74,33 +31,6 @@
         .task-palette-item:hover {
             border-color: #007bff;
             background: #f8f9fa;
-        }
-        
-        .task-palette-item:active {
-            cursor: grabbing;
-        }
-        
-        .connection-line {
-            position: absolute;
-            pointer-events: none;
-            z-index: 5;
-        }
-        
-        .properties-panel {
-            max-height: 600px;
-            overflow-y: auto;
-        }
-        
-        .canvas-grid {
-            background-image: 
-                linear-gradient(rgba(0,0,0,.05) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(0,0,0,.05) 1px, transparent 1px);
-            background-size: 20px 20px;
-        }
-        
-        .toolbar-item {
-            margin-right: 5px;
-            margin-bottom: 5px;
         }
     </style>
 </head>
@@ -141,7 +71,7 @@
                             <i class="fas fa-tools me-2"></i>Task Palette
                         </h6>
                     </div>
-                    <div class="card-body task-palette">
+                    <div class="card-body">
                         <div class="task-palette-item" data-task-type="DEVICE_CONFIG">
                             <i class="fas fa-server text-primary"></i>
                             <strong class="d-block">Device Config</strong>
@@ -165,22 +95,6 @@
                             <strong class="d-block">Set Variable</strong>
                             <small class="text-muted">Define workflow variable</small>
                         </div>
-                        
-                        <div class="task-palette-item" data-task-type="SCRIPT_EXECUTION">
-                            <i class="fas fa-code text-secondary"></i>
-                            <strong class="d-block">Script Execution</strong>
-                            <small class="text-muted">Custom script execution</small>
-                        </div>
-                        
-                        <hr>
-                        
-                        <h6>Templates</h6>
-                        <div id="templates-list">
-                            <div class="text-center text-muted">
-                                <div class="spinner-border spinner-border-sm" role="status"></div>
-                                <div>Loading...</div>
-                            </div>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -197,27 +111,22 @@
                                 </h6>
                             </div>
                             <div class="col-auto">
-                                <!-- Toolbar -->
-                                <div class="btn-toolbar">
-                                    <button class="btn btn-sm btn-success toolbar-item" onclick="saveWorkflow()" title="Save">
-                                        <i class="fas fa-save"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-primary toolbar-item" onclick="executeWorkflow()" title="Execute">
-                                        <i class="fas fa-play"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-info toolbar-item" onclick="validateWorkflow()" title="Validate">
-                                        <i class="fas fa-check-circle"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-secondary toolbar-item" onclick="clearCanvas()" title="Clear">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </div>
+                                <button class="btn btn-sm btn-success" onclick="saveWorkflow()" title="Save">
+                                    <i class="fas fa-save"></i>
+                                </button>
+                                <button class="btn btn-sm btn-primary" onclick="executeWorkflow()" title="Execute">
+                                    <i class="fas fa-play"></i>
+                                </button>
                             </div>
                         </div>
                     </div>
-                    <div class="card-body p-0">
-                        <div class="workflow-canvas canvas-grid" id="workflow-canvas">
-                            <!-- Task nodes and connections will be rendered here -->
+                    <div class="card-body">
+                        <div class="workflow-canvas" id="workflow-canvas">
+                            <div class="text-center text-muted p-5">
+                                <i class="fas fa-mouse-pointer fa-3x mb-3"></i>
+                                <h5>Workflow Canvas</h5>
+                                <p>Drag tasks from the palette to build your workflow</p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -231,7 +140,7 @@
                             <i class="fas fa-cogs me-2"></i>Properties
                         </h6>
                     </div>
-                    <div class="card-body properties-panel" id="properties-panel">
+                    <div class="card-body" id="properties-panel">
                         <div class="text-center text-muted">
                             <i class="fas fa-mouse-pointer fa-2x mb-3"></i>
                             <p>Select a task to view its properties</p>
@@ -246,14 +155,10 @@
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- Dragula for drag and drop -->
-    <script src="https://cdn.jsdelivr.net/npm/dragula@3.7.3/dist/dragula.min.js"></script>
     
     <script>
         let currentWorkflow = null;
         let selectedTask = null;
-        let taskCounter = 0;
-        let templates = [];
         
         // Get workflow ID from URL
         const workflowId = window.location.pathname.split('/').pop();
@@ -264,10 +169,6 @@
             } else {
                 initializeNewWorkflow();
             }
-            
-            loadTemplates();
-            setupDragAndDrop();
-            setupCanvasEvents();
         });
         
         function initializeNewWorkflow() {
@@ -296,76 +197,30 @@
                 });
         }
         
-        function loadTemplates() {
-            $.get('/api/templates')
-                .done(function(data) {
-                    templates = data;
-                    renderTemplates();
-                })
-                .fail(function() {
-                    $('#templates-list').html('<div class="text-center text-danger">Failed to load templates</div>');
-                });
-        }
-        
-        function renderTemplates() {
-            const templatesList = $('#templates-list');
-            templatesList.empty();
-            
-            if (templates.length === 0) {
-                templatesList.html('<div class="text-muted small">No templates available</div>');
-                return;
-            }
-            
-            templates.forEach(function(template) {
-                const templateItem = `
-                    <div class="task-palette-item" data-template-id="${template.id}">
-                        <i class="fas fa-file-code text-primary"></i>
-                        <strong class="d-block">${escapeHtml(template.name)}</strong>
-                        <small class="text-muted">${escapeHtml(template.deviceType)}</small>
-                    </div>
-                `;
-                templatesList.append(templateItem);
-            });
-        }
-        
-        function setupDragAndDrop() {
-            // Basic drag and drop placeholder - can be enhanced
-            console.log('Drag and drop functionality initialized');
-        }
-        
-        function setupCanvasEvents() {
-            $('#workflow-canvas').on('click', function(e) {
-                if (e.target === this) {
-                    selectTask(null);
-                }
-            });
-        }
-        
         function renderWorkflow() {
             $('#workflow-canvas').empty();
             
-            if (currentWorkflow.tasks) {
+            if (currentWorkflow.tasks && currentWorkflow.tasks.length > 0) {
                 currentWorkflow.tasks.forEach(function(task) {
                     renderTask(task);
                 });
+            } else {
+                $('#workflow-canvas').html(`
+                    <div class="text-center text-muted p-5">
+                        <i class="fas fa-mouse-pointer fa-3x mb-3"></i>
+                        <h5>Workflow Canvas</h5>
+                        <p>Drag tasks from the palette to build your workflow</p>
+                    </div>
+                `);
             }
         }
         
         function renderTask(task) {
             const taskElement = $(`
-                <div class="task-node task-type-${task.type} task-status-${task.status}" 
-                     id="task-${task.id}" 
-                     data-task-id="${task.id}"
-                     style="left: ${task.positionX}px; top: ${task.positionY}px;">
-                    <div class="task-icon mb-1">
-                        ${getTaskIcon(task.type)}
-                    </div>
-                    <div class="task-name">
-                        <strong>${escapeHtml(task.name)}</strong>
-                    </div>
-                    <div class="task-type">
-                        <small class="text-muted">${task.type}</small>
-                    </div>
+                <div class="alert alert-info m-2" data-task-id="${task.id}">
+                    <strong>${escapeHtml(task.name)}</strong><br>
+                    <small>Type: ${task.type}</small><br>
+                    <small>Status: ${task.status}</small>
                 </div>
             `);
             
@@ -377,23 +232,12 @@
             $('#workflow-canvas').append(taskElement);
         }
         
-        function getTaskIcon(type) {
-            switch(type) {
-                case 'DEVICE_CONFIG': return '<i class="fas fa-server text-primary"></i>';
-                case 'TEMPLATE_CONFIG': return '<i class="fas fa-file-code text-success"></i>';
-                case 'CONDITION': return '<i class="fas fa-question-circle text-warning"></i>';
-                case 'VARIABLE_SET': return '<i class="fas fa-cog text-info"></i>';
-                case 'SCRIPT_EXECUTION': return '<i class="fas fa-code text-secondary"></i>';
-                default: return '<i class="fas fa-circle"></i>';
-            }
-        }
-        
         function selectTask(task) {
-            $('.task-node').removeClass('selected');
+            $('.alert').removeClass('alert-primary').addClass('alert-info');
             selectedTask = task;
             
             if (task) {
-                $(`#task-${task.id}`).addClass('selected');
+                $(`[data-task-id="${task.id}"]`).removeClass('alert-info').addClass('alert-primary');
                 showTaskProperties(task);
             } else {
                 showWorkflowProperties();
@@ -406,22 +250,7 @@
                     <h6>Task Information</h6>
                     <p><strong>Name:</strong> ${escapeHtml(task.name)}</p>
                     <p><strong>Type:</strong> ${task.type}</p>
-                    <p><strong>Status:</strong> <span class="badge bg-${getStatusColor(task.status)}">${task.status}</span></p>
-                    <p><strong>ID:</strong> <code>${task.id}</code></p>
-                </div>
-                
-                <div class="mb-3">
-                    <h6>Parameters</h6>
-                    <div class="table-responsive">
-                        <table class="table table-sm">
-                            ${Object.entries(task.parameters || {}).map(([key, value]) => `
-                                <tr>
-                                    <td><small><strong>${key}</strong></small></td>
-                                    <td><small>${escapeHtml(String(value))}</small></td>
-                                </tr>
-                            `).join('')}
-                        </table>
-                    </div>
+                    <p><strong>Status:</strong> ${task.status}</p>
                 </div>
             `;
             $('#properties-panel').html(properties);
@@ -432,20 +261,16 @@
                 <div class="mb-3">
                     <h6>Workflow Information</h6>
                     <p><strong>Name:</strong> ${escapeHtml(currentWorkflow.name)}</p>
-                    <p><strong>Status:</strong> <span class="badge bg-${getStatusColor(currentWorkflow.status)}">${currentWorkflow.status}</span></p>
+                    <p><strong>Status:</strong> ${currentWorkflow.status}</p>
                     <p><strong>Tasks:</strong> ${currentWorkflow.tasks.length}</p>
-                    <p><strong>Connections:</strong> ${currentWorkflow.connections.length}</p>
                 </div>
                 
                 <div class="d-grid gap-2">
                     <button class="btn btn-success btn-sm" onclick="saveWorkflow()">
-                        <i class="fas fa-save me-1"></i>Save Workflow
+                        <i class="fas fa-save me-1"></i>Save
                     </button>
                     <button class="btn btn-primary btn-sm" onclick="executeWorkflow()">
-                        <i class="fas fa-play me-1"></i>Execute Workflow
-                    </button>
-                    <button class="btn btn-info btn-sm" onclick="validateWorkflow()">
-                        <i class="fas fa-check-circle me-1"></i>Validate
+                        <i class="fas fa-play me-1"></i>Execute
                     </button>
                 </div>
             `;
@@ -508,42 +333,6 @@
             }
         }
         
-        function validateWorkflow() {
-            let errors = [];
-            
-            if (currentWorkflow.tasks.length === 0) {
-                errors.push('Workflow must have at least one task');
-            }
-            
-            if (errors.length === 0) {
-                showAlert('Workflow is valid', 'success');
-            } else {
-                showAlert('Validation errors: ' + errors.join(', '), 'warning');
-            }
-        }
-        
-        function clearCanvas() {
-            if (confirm('Are you sure you want to clear the canvas? This will remove all tasks and connections.')) {
-                currentWorkflow.tasks = [];
-                currentWorkflow.connections = [];
-                $('#workflow-canvas').empty();
-                selectTask(null);
-            }
-        }
-        
-        // Utility functions
-        function getStatusColor(status) {
-            switch(status) {
-                case 'DRAFT': return 'secondary';
-                case 'READY': return 'primary';
-                case 'RUNNING': return 'warning';
-                case 'COMPLETED': return 'success';
-                case 'FAILED': return 'danger';
-                case 'PAUSED': return 'info';
-                default: return 'secondary';
-            }
-        }
-        
         function escapeHtml(unsafe) {
             if (!unsafe) return '';
             return unsafe.toString()
@@ -569,7 +358,7 @@
         }
         
         // Initialize on page load
-        selectTask(null);
+        showWorkflowProperties();
     </script>
 </body>
 </html>
