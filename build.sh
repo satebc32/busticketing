@@ -25,7 +25,7 @@ fi
 
 # Install Python dependencies
 echo "Installing Python dependencies..."
-pip3 install -r python/requirements.txt
+pip install -r python/requirements.txt
 
 # Make Python script executable
 chmod +x python/netmiko_executor.py
