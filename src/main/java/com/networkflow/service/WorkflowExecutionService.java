@@ -175,20 +175,34 @@ public class WorkflowExecutionService {
     private boolean executeDeviceConfigTask(WorkflowExecution execution, WorkflowTask task) {
         // Execute device configuration task
         try {
-            Map<String, Object> netmikoParams = new HashMap<>();
-            netmikoParams.put("device_type", task.getParameter("device_type"));
-            netmikoParams.put("host", task.getParameter("host"));
-            netmikoParams.put("username", task.getParameter("username"));
-            netmikoParams.put("password", task.getParameter("password"));
-            netmikoParams.put("commands", task.getParameter("commands"));
-
-            String output = netmikoService.executeCommands(netmikoParams);
-            
-            // Apply template-based output parsing to extract variables
+            // Create device connection from task parameters
             String deviceType = (String) task.getParameter("device_type");
+            String host = (String) task.getParameter("host");
+            String username = (String) task.getParameter("username");
+            String password = (String) task.getParameter("password");
             String commands = (String) task.getParameter("commands");
             
-            // Parse output using templates for each command
+            if (deviceType == null || host == null || username == null || password == null) {
+                throw new IllegalArgumentException("Missing required connection parameters");
+            }
+            
+            NetmikoService.DeviceConnection deviceConnection = new NetmikoService.DeviceConnection(
+                deviceType, host, username, password);
+            
+            // Get timeout parameter or use default
+            Object timeoutParam = task.getParameter("timeout");
+            int timeout = timeoutParam != null ? (Integer) timeoutParam : 60;
+            
+            NetmikoService.NetmikoResult result = netmikoService.executeDeviceConfig(
+                deviceConnection, commands, timeout);
+            
+            if (!result.isSuccess()) {
+                throw new RuntimeException("Netmiko execution failed: " + result.getMessage());
+            }
+            
+            String output = result.getOutput();
+            
+            // Apply template-based output parsing to extract variables
             if (commands != null) {
                 String[] commandList = commands.split("\n");
                 for (String command : commandList) {
@@ -239,21 +253,35 @@ public class WorkflowExecutionService {
             }
 
             // Apply template with variables
-            String configCommands = templateService.applyTemplate(template, execution.getVariables());
+            String configCommands = template.processTemplate(execution.getVariables());
 
-            Map<String, Object> netmikoParams = new HashMap<>();
-            netmikoParams.put("device_type", task.getParameter("device_type"));
-            netmikoParams.put("host", task.getParameter("host"));
-            netmikoParams.put("username", task.getParameter("username"));
-            netmikoParams.put("password", task.getParameter("password"));
-            netmikoParams.put("commands", configCommands);
-
-            String output = netmikoService.executeCommands(netmikoParams);
+            // Create device connection from task parameters
+            String deviceType = (String) task.getParameter("device_type");
+            String host = (String) task.getParameter("host");
+            String username = (String) task.getParameter("username");
+            String password = (String) task.getParameter("password");
+            
+            if (deviceType == null || host == null || username == null || password == null) {
+                throw new IllegalArgumentException("Missing required connection parameters");
+            }
+            
+            NetmikoService.DeviceConnection deviceConnection = new NetmikoService.DeviceConnection(
+                deviceType, host, username, password);
+            
+            // Get timeout parameter or use default
+            Object timeoutParam = task.getParameter("timeout");
+            int timeout = timeoutParam != null ? (Integer) timeoutParam : 60;
+            
+            NetmikoService.NetmikoResult result = netmikoService.executeDeviceConfig(
+                deviceConnection, configCommands, timeout);
+            
+            if (!result.isSuccess()) {
+                throw new RuntimeException("Netmiko execution failed: " + result.getMessage());
+            }
+            
+            String output = result.getOutput();
             
             // Apply template-based output parsing to extract variables
-            String deviceType = (String) task.getParameter("device_type");
-            
-            // Parse output using templates for each command in the applied template
             if (configCommands != null) {
                 String[] commandList = configCommands.split("\n");
                 for (String command : commandList) {

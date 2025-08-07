@@ -131,6 +131,9 @@
                 <a class="nav-link" href="/templates">
                     <i class="fas fa-file-code me-1"></i>Templates
                 </a>
+                <a class="nav-link" href="/output-parsing">
+                    <i class="fas fa-code-branch me-1"></i>Output Parsing
+                </a>
                 <a class="nav-link" href="/about">
                     <i class="fas fa-info-circle me-1"></i>About
                 </a>
@@ -655,7 +658,16 @@
                         <div class="parameter-row">
                             <label class="form-label">Condition Expression *</label>
                             <input type="text" class="form-control" id="param_condition" value="${escapeHtml(parameters.condition || '')}" required>
-                            <small class="form-text text-muted">Example: \${result} == "success" or \${error_count} > 0</small>
+                            <small class="form-text text-muted">
+                                <strong>Examples:</strong><br>
+                                • <code>\${vlan_status} == "success"</code> - Check VLAN configuration success<br>
+                                • <code>\${apply_vlan_100_result} == "success"</code> - Check specific task result<br>
+                                • <code>\${ping_status} == "success"</code> - Check connectivity<br>
+                                • <code>\${interface_status} == "success"</code> - Check interface configuration<br>
+                                • <code>\${verification_status} == "success"</code> - Check verification tasks<br>
+                                • <code>\${task_output} contains "active"</code> - Check if output contains text<br>
+                                • <code>\${error_count} > 0</code> - Check numeric conditions
+                            </small>
                         </div>
                         <div class="parameter-row">
                             <label class="form-label">Action if True</label>
@@ -672,6 +684,26 @@
                                 <option value="skip" ${parameters.false_action === 'skip' ? 'selected' : ''}>Skip next task</option>
                                 <option value="stop" ${parameters.false_action === 'stop' ? 'selected' : ''}>Stop workflow</option>
                             </select>
+                        </div>
+                        <div class="alert alert-info mt-2">
+                            <small>
+                                <strong><i class="fas fa-info-circle"></i> Auto-Generated Variables:</strong><br>
+                                • <strong>Generic:</strong> <code>\${generic_status}</code>, <code>\${command_status}</code> (success/failed)<br>
+                                • <strong>Task Results:</strong> <code>\${task_name_result}</code>, <code>\${task_name_output}</code><br>
+                                • <strong>Specialized:</strong> <code>\${vlan_status}</code>, <code>\${interface_status}</code>, <code>\${ping_status}</code><br>
+                                • <strong>Advanced:</strong> <code>\${route_status}</code>, <code>\${save_status}</code>, <code>\${show_status}</code><br>
+                                • <strong>Confidence:</strong> <code>\${success_confidence}</code>, <code>\${failure_confidence}</code> (numeric scores)<br>
+                                • <strong>VLAN IDs:</strong> <code>\${vlan_[id]_status}</code> (e.g., vlan_100_status)<br><br>
+                                
+                                <strong><i class="fas fa-magic"></i> Template-Based Variables:</strong><br>
+                                • <strong>Interface Info:</strong> <code>\${interface_name}</code>, <code>\${admin_status}</code>, <code>\${operational_status}</code>, <code>\${ip_address}</code><br>
+                                • <strong>VLAN Details:</strong> <code>\${vlan_100_name}</code>, <code>\${total_vlans}</code>, <code>\${active_vlans}</code><br>
+                                • <strong>System Info:</strong> <code>\${ios_version}</code>, <code>\${device_model}</code>, <code>\${uptime_days}</code>, <code>\${serial_number}</code><br>
+                                • <strong>Routing:</strong> <code>\${default_route_via}</code>, <code>\${static_routes_count}</code>, <code>\${has_default_route}</code><br>
+                                • <strong>Ping Results:</strong> <code>\${ping_target}</code>, <code>\${packets_sent}</code>, <code>\${packet_loss_percent}</code>, <code>\${ping_success}</code><br>
+                                • <strong>Counters:</strong> <code>\${total_mac_entries}</code>, <code>\${total_arp_entries}</code>, <code>\${command_count}</code><br>
+                                • <strong>Custom Grep:</strong> <code>\${error_lines}</code>, <code>\${success_lines}</code>, <code>\${ip_addresses}</code>
+                            </small>
                         </div>
                     `);
                     break;

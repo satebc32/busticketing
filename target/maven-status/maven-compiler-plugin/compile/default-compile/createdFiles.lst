@@ -1,3 +1,4 @@
+com/networkflow/model/OutputParsingTemplate.class
 com/networkflow/service/TemplateService.class
 com/networkflow/service/NetmikoService$DeviceConnection.class
 com/networkflow/service/WorkflowExecutionService.class
@@ -6,13 +7,20 @@ com/networkflow/template/TemplateParameter$ParameterType.class
 com/networkflow/service/WorkflowExecutionService$WorkflowExecution.class
 com/networkflow/model/Workflow.class
 com/networkflow/service/WorkflowExecutionService$WorkflowExecutionResult.class
+com/networkflow/controller/OutputParsingController$ParseRequest.class
 com/networkflow/controller/TemplateController.class
 com/networkflow/model/TaskConnection$ConnectionType.class
 com/networkflow/controller/WebController.class
+com/networkflow/controller/OutputParsingController$TestRequest.class
 com/networkflow/model/WorkflowTask$TaskType.class
+com/networkflow/service/OutputParsingService.class
 com/networkflow/NetworkWorkflowApplication.class
 com/networkflow/model/WorkflowTask$TaskStatus.class
 com/networkflow/controller/WorkflowController.class
+com/networkflow/model/OutputParsingTemplate$ParsingRule.class
+com/networkflow/service/OutputParsingService$1.class
+com/networkflow/model/OutputParsingTemplate$ParsingType.class
+com/networkflow/controller/OutputParsingController.class
 com/networkflow/model/TaskConnection.class
 com/networkflow/template/TemplateParameter.class
 com/networkflow/model/WorkflowTask.class

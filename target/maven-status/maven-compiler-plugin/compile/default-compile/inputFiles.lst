@@ -1,5 +1,8 @@
+/workspace/src/main/java/com/networkflow/service/OutputParsingService.java
+/workspace/src/main/java/com/networkflow/model/OutputParsingTemplate.java
 /workspace/src/main/java/com/networkflow/service/WorkflowExecutionService.java
 /workspace/src/main/java/com/networkflow/NetworkWorkflowApplication.java
+/workspace/src/main/java/com/networkflow/controller/OutputParsingController.java
 /workspace/src/main/java/com/networkflow/model/Workflow.java
 /workspace/src/main/java/com/networkflow/template/TemplateParameter.java
 /workspace/src/main/java/com/networkflow/service/TemplateService.java

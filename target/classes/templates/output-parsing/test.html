@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Template Testing - Output Parsing</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.0/codemirror.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.0/theme/material.min.css" rel="stylesheet">
+    <link href="/css/app.css" rel="stylesheet">
+    <style>
+        .variable-result {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 0.25rem;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            font-family: monospace;
+        }
+        .variable-result.success {
+            border-color: #198754;
+            background: #d1e7dd;
+        }
+        .variable-result.error {
+            border-color: #dc3545;
+            background: #f8d7da;
+        }
+        .variable-result.empty {
+            border-color: #ffc107;
+            background: #fff3cd;
+        }
+        .test-output-container {
+            position: relative;
+        }
+        .highlight-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+            font-family: 'Courier New', monospace;
+            white-space: pre;
+            padding: 1rem;
+            line-height: 1.5;
+        }
+        .highlight-match {
+            background-color: rgba(255, 193, 7, 0.5);
+            padding: 2px 0;
+        }
+        .CodeMirror {
+            height: 400px;
+            border: 1px solid #dee2e6;
+            border-radius: 0.375rem;
+        }
+        .template-selector {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .template-item {
+            border: 1px solid #dee2e6;
+            border-radius: 0.375rem;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .template-item:hover {
+            border-color: #0d6efd;
+            background: #f8f9fa;
+        }
+        .template-item.selected {
+            border-color: #0d6efd;
+            background: #e7f1ff;
+        }
+        .sample-output-item {
+            border: 1px solid #dee2e6;
+            border-radius: 0.375rem;
+            padding: 0.5rem;
+            margin-bottom: 0.5rem;
+            cursor: pointer;
+            background: #f8f9fa;
+        }
+        .sample-output-item:hover {
+            border-color: #0d6efd;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-network-wired me-2"></i>Network Workflow
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/workflows">Workflows</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/templates">Templates</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/output-parsing">Output Parsing</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container mt-4">
+        <!-- Header -->
+        <div class="row mb-4">
+            <div class="col">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h1>
+                            <i class="fas fa-vial text-primary me-2"></i>Template Testing
+                        </h1>
+                        <p class="text-muted">Test output parsing templates with sample command output to verify variable extraction.</p>
+                    </div>
+                    <div>
+                        <a href="/output-parsing" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Back to Templates
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Template Selection -->
+            <div class="col-md-4">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-magic me-2"></i>Select Template
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="template-selector" id="templateSelector">
+                            <div class="text-center py-3">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p class="mt-2">Loading templates...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sample Outputs -->
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="fas fa-file-alt me-2"></i>Sample Outputs
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <div class="sample-output-item" onclick="loadSampleOutput('vlan')">
+                                <strong>VLAN Status</strong><br>
+                                <small class="text-muted">Cisco show vlan brief output</small>
+                            </div>
+                            <div class="sample-output-item" onclick="loadSampleOutput('interface')">
+                                <strong>Interface Status</strong><br>
+                                <small class="text-muted">show interface GigabitEthernet0/1</small>
+                            </div>
+                            <div class="sample-output-item" onclick="loadSampleOutput('ping')">
+                                <strong>Ping Test</strong><br>
+                                <small class="text-muted">ping 8.8.8.8 command output</small>
+                            </div>
+                            <div class="sample-output-item" onclick="loadSampleOutput('routing')">
+                                <strong>Routing Table</strong><br>
+                                <small class="text-muted">show ip route output</small>
+                            </div>
+                            <div class="sample-output-item" onclick="loadSampleOutput('version')">
+                                <strong>System Version</strong><br>
+                                <small class="text-muted">show version output</small>
+                            </div>
+                        </div>
+                        <button class="btn btn-outline-primary btn-sm w-100" onclick="clearOutput()">
+                            <i class="fas fa-eraser me-2"></i>Clear Output
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Command Output -->
+            <div class="col-md-8">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">
+                                <i class="fas fa-terminal me-2"></i>Command Output
+                            </h5>
+                            <div>
+                                <button class="btn btn-outline-secondary btn-sm me-2" onclick="uploadFile()">
+                                    <i class="fas fa-upload me-2"></i>Upload File
+                                </button>
+                                <button class="btn btn-primary btn-sm" onclick="runTest()" id="testButton" disabled>
+                                    <i class="fas fa-play me-2"></i>Run Test
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="test-output-container">
+                            <div id="commandOutput"></div>
+                            <div class="highlight-overlay" id="highlightOverlay"></div>
+                        </div>
+                        <input type="file" id="fileInput" style="display: none;" accept=".txt,.log" onchange="handleFileUpload(event)">
+                    </div>
+                </div>
+
+                <!-- Test Results -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">
+                                <i class="fas fa-chart-bar me-2"></i>Test Results
+                            </h5>
+                            <div>
+                                <button class="btn btn-outline-secondary btn-sm me-2" onclick="exportResults()" id="exportButton" style="display: none;">
+                                    <i class="fas fa-download me-2"></i>Export
+                                </button>
+                                <button class="btn btn-outline-info btn-sm" onclick="compareTemplates()" id="compareButton" style="display: none;">
+                                    <i class="fas fa-balance-scale me-2"></i>Compare
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div id="testResults">
+                            <div class="text-center py-4 text-muted">
+                                <i class="fas fa-vial fa-3x mb-3"></i>
+                                <h6>No test results yet</h6>
+                                <p>Select a template and command output, then click "Run Test" to see extracted variables.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Template Comparison Modal -->
+    <div class="modal fade" id="compareModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-balance-scale me-2"></i>Template Comparison
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Template A</h6>
+                            <select class="form-select mb-3" id="templateA">
+                                <option value="">Select template...</option>
+                            </select>
+                            <div id="resultsA" class="border rounded p-3" style="min-height: 200px;">
+                                Select a template to see results
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Template B</h6>
+                            <select class="form-select mb-3" id="templateB">
+                                <option value="">Select template...</option>
+                            </select>
+                            <div id="resultsB" class="border rounded p-3" style="min-height: 200px;">
+                                Select a template to see results
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <button class="btn btn-primary" onclick="runComparison()">
+                            <i class="fas fa-play me-2"></i>Run Comparison
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.0/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.0/mode/shell/shell.min.js"></script>
+    <script src="/js/app.js"></script>
+    <script>
+        let allTemplates = [];
+        let selectedTemplate = null;
+        let commandOutputEditor = null;
+        let lastTestResults = null;
+
+        // Sample outputs for testing
+        const sampleOutputs = {
+            vlan: `VLAN Name                             Status    Ports
+---- -------------------------------- --------- -------------------------------
+   1 default                          active    Gi0/1, Gi0/2, Gi0/5-24
+ 100 DATA_VLAN                        active    Gi0/1, Gi0/2, Gi0/5-10
+ 200 VOICE_VLAN                       active    Gi0/3, Gi0/4
+ 300 GUEST_VLAN                       active    Gi0/11-20
+ 999 MANAGEMENT                       active    
+
+VLAN Type  SAID       MTU   Parent RingNo BridgeNo Stp  BrdgMode Trans1 Trans2
+---- ----- ---------- ----- ------ ------ ------ -------- ------ ------ ------
+   1 enet  100001     1500  -      -      -      -        0      0
+ 100 enet  100100     1500  -      -      -      -        0      0
+ 200 enet  100200     1500  -      -      -      -        0      0`,
+
+            interface: `GigabitEthernet0/1 is up, line protocol is up
+  Hardware is Gigabit Ethernet, address is 0050.56c0.0001
+  Description: Uplink to Core Switch
+  Internet address is 192.168.1.10/24
+  MTU 1500 bytes, BW 1000000 Kbit/sec, DLY 100 usec,
+     reliability 255/255, txload 1/255, rxload 1/255
+  Encapsulation ARPA, loopback not set
+  Keepalive set (10 sec)
+  Full-duplex, 1000Mb/s, media type is 10/100/1000BaseTX
+  input flow-control is off, output flow-control is unsupported
+  ARP type: ARPA, ARP Timeout 04:00:00
+  Last input 00:00:00, output 00:00:00, output hang never
+  Last clearing of "show interface" counters never
+  Input queue: 0/75/0/0 (size/max/drops/flushes); Total output drops: 0`,
+
+            ping: `PING 8.8.8.8 (8.8.8.8): 56 data bytes
+64 bytes from 8.8.8.8: icmp_seq=0 ttl=54 time=12.345 ms
+64 bytes from 8.8.8.8: icmp_seq=1 ttl=54 time=11.234 ms
+64 bytes from 8.8.8.8: icmp_seq=2 ttl=54 time=13.456 ms
+64 bytes from 8.8.8.8: icmp_seq=3 ttl=54 time=10.789 ms
+
+--- 8.8.8.8 ping statistics ---
+4 packets transmitted, 4 packets received, 0% packet loss
+round-trip min/avg/max/stddev = 10.789/11.956/13.456/1.123 ms`,
+
+            routing: `Codes: C - connected, S - static, R - RIP, M - mobile, B - BGP
+       D - EIGRP, EX - EIGRP external, O - OSPF, IA - OSPF inter area
+       N1 - OSPF NSSA external type 1, N2 - OSPF NSSA external type 2
+       E1 - OSPF external type 1, E2 - OSPF external type 2
+       i - IS-IS, su - IS-IS summary, L1 - IS-IS level-1, L2 - IS-IS level-2
+       ia - IS-IS inter area, * - candidate default, U - per-user static route
+       o - ODR, P - periodic downloaded static route
+
+Gateway of last resort is 192.168.1.1 to network 0.0.0.0
+
+S*   0.0.0.0/0 [1/0] via 192.168.1.1
+C    10.0.0.0/8 is directly connected, Loopback0
+C    192.168.1.0/24 is directly connected, GigabitEthernet0/1
+S    172.16.0.0/16 [1/0] via 192.168.1.1
+O    192.168.2.0/24 [110/2] via 192.168.1.2, 01:23:45, GigabitEthernet0/1`,
+
+            version: `Cisco IOS Software, C2960 Software (C2960-LANBASEK9-M), Version 15.0(2)SE4, RELEASE SOFTWARE (fc1)
+Technical Support: http://www.cisco.com/techsupport
+Copyright (c) 1986-2013 by Cisco Systems, Inc.
+Compiled Wed 26-Jun-13 02:49 by prod_rel_team
+
+ROM: Bootstrap program is C2960 boot loader
+BOOTLDR: C2960 Boot Loader (C2960-HBOOT-M) Version 12.2(58r)SE, RELEASE SOFTWARE (fc1)
+
+SW-CORE-01 uptime is 45 days, 12 hours, 34 minutes
+System returned to ROM by power-on
+System restarted at 09:15:32 UTC Mon Mar 1 2024
+System image file is "flash:/c2960-lanbasek9-mz.150-2.SE4.bin"
+
+This product contains cryptographic features and is subject to United
+States and local country laws governing import, export, transfer and
+use. Delivery of Cisco cryptographic products does not imply
+third-party authority to import, export, distribute or use encryption.
+Importers, exporters, distributors and users are responsible for
+compliance with U.S. and local country laws.
+
+cisco WS-C2960-24TT-L (PowerPC405) processor (revision A0) with 65536K bytes of memory.
+Processor board ID FCH1234A5B6
+Last reset from power-on
+1 Virtual Ethernet interface
+24 FastEthernet interfaces
+2 Gigabit Ethernet interfaces
+The password-recovery mechanism is enabled.
+
+512K bytes of flash-simulated non-volatile configuration memory.
+Base ethernet MAC Address       : 00:1B:54:12:34:56
+Motherboard assembly number     : 73-10390-03
+Power supply assembly number    : 341-0097-02
+Motherboard serial number       : FCH123401AB
+Power supply serial number      : AZS12340123
+Model revision number          : A0
+Motherboard revision number     : A0
+Model number                    : WS-C2960-24TT-L
+System serial number            : FCH1234A5B6`
+        };
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            loadTemplates();
+            initializeCodeEditor();
+            
+            // Check if template ID is specified in URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const templateId = urlParams.get('template');
+            if (templateId) {
+                // Will select template after templates are loaded
+                setTimeout(() => selectTemplateById(templateId), 1000);
+            }
+        });
+
+        function initializeCodeEditor() {
+            const textarea = document.createElement('textarea');
+            textarea.id = 'commandOutputTextarea';
+            textarea.className = 'form-control';
+            textarea.placeholder = 'Paste command output here or select a sample output...';
+            document.getElementById('commandOutput').appendChild(textarea);
+
+            commandOutputEditor = CodeMirror.fromTextArea(textarea, {
+                mode: 'shell',
+                theme: 'default',
+                lineNumbers: true,
+                lineWrapping: true,
+                placeholder: 'Paste command output here...'
+            });
+
+            commandOutputEditor.on('change', function() {
+                updateTestButton();
+            });
+        }
+
+        async function loadTemplates() {
+            try {
+                const response = await fetch('/api/output-parsing/templates');
+                if (response.ok) {
+                    allTemplates = await response.json();
+                    renderTemplates();
+                } else {
+                    throw new Error('Failed to load templates');
+                }
+            } catch (error) {
+                console.error('Error loading templates:', error);
+                showError('Failed to load templates: ' + error.message);
+                document.getElementById('templateSelector').innerHTML = `
+                    <div class="text-center py-3 text-danger">
+                        <i class="fas fa-exclamation-triangle mb-2"></i>
+                        <p>Failed to load templates</p>
+                    </div>
+                `;
+            }
+        }
+
+        function renderTemplates() {
+            const container = document.getElementById('templateSelector');
+            
+            if (allTemplates.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-3 text-muted">
+                        <i class="fas fa-magic mb-2"></i>
+                        <p>No templates available</p>
+                        <a href="/output-parsing/new" class="btn btn-primary btn-sm">
+                            <i class="fas fa-plus me-2"></i>Create Template
+                        </a>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = allTemplates.map(template => `
+                <div class="template-item" data-template-id="${template.id}" onclick="selectTemplate('${template.id}')">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <strong>${escapeHtml(template.name)}</strong>
+                            <br>
+                            <small class="text-muted">${escapeHtml(template.description || 'No description')}</small>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge bg-${getDeviceTypeBadgeColor(template.deviceType)} mb-1">
+                                ${template.deviceType || 'generic'}
+                            </span>
+                            <br>
+                            <small class="text-muted">${template.rules ? template.rules.length : 0} rules</small>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function getDeviceTypeBadgeColor(deviceType) {
+            switch (deviceType) {
+                case 'cisco': return 'primary';
+                case 'arista': return 'success';
+                case 'juniper': return 'info';
+                case 'generic': return 'secondary';
+                default: return 'light';
+            }
+        }
+
+        function selectTemplate(templateId) {
+            // Remove previous selection
+            document.querySelectorAll('.template-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            
+            // Select new template
+            const templateElement = document.querySelector(`[data-template-id="${templateId}"]`);
+            if (templateElement) {
+                templateElement.classList.add('selected');
+            }
+            
+            selectedTemplate = allTemplates.find(t => t.id === templateId);
+            updateTestButton();
+        }
+
+        function selectTemplateById(templateId) {
+            selectTemplate(templateId);
+        }
+
+        function updateTestButton() {
+            const hasTemplate = selectedTemplate !== null;
+            const hasOutput = commandOutputEditor && commandOutputEditor.getValue().trim().length > 0;
+            
+            const testButton = document.getElementById('testButton');
+            testButton.disabled = !(hasTemplate && hasOutput);
+            
+            if (hasTemplate && hasOutput) {
+                testButton.className = 'btn btn-success btn-sm';
+                testButton.innerHTML = '<i class="fas fa-play me-2"></i>Run Test';
+            } else {
+                testButton.className = 'btn btn-primary btn-sm';
+                testButton.innerHTML = '<i class="fas fa-play me-2"></i>Run Test';
+            }
+        }
+
+        function loadSampleOutput(type) {
+            if (sampleOutputs[type]) {
+                commandOutputEditor.setValue(sampleOutputs[type]);
+                updateTestButton();
+            }
+        }
+
+        function clearOutput() {
+            commandOutputEditor.setValue('');
+            updateTestButton();
+        }
+
+        function uploadFile() {
+            document.getElementById('fileInput').click();
+        }
+
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    commandOutputEditor.setValue(e.target.result);
+                    updateTestButton();
+                };
+                reader.readAsText(file);
+            }
+        }
+
+        async function runTest() {
+            if (!selectedTemplate) {
+                showError('Please select a template first');
+                return;
+            }
+            
+            const output = commandOutputEditor.getValue();
+            if (!output.trim()) {
+                showError('Please enter command output');
+                return;
+            }
+            
+            const testButton = document.getElementById('testButton');
+            const originalContent = testButton.innerHTML;
+            testButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Testing...';
+            testButton.disabled = true;
+            
+            try {
+                const response = await fetch(`/api/output-parsing/templates/${selectedTemplate.id}/test`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ output: output })
+                });
+                
+                let results;
+                if (response.ok) {
+                    results = await response.json();
+                } else {
+                    // Fallback to client-side simulation if API fails
+                    results = simulateTemplateTest(selectedTemplate, output);
+                }
+                
+                lastTestResults = {
+                    template: selectedTemplate,
+                    output: output,
+                    results: results
+                };
+                
+                displayTestResults(results);
+                
+                // Show additional buttons
+                document.getElementById('exportButton').style.display = 'inline-block';
+                document.getElementById('compareButton').style.display = 'inline-block';
+                
+            } catch (error) {
+                console.error('Error testing template:', error);
+                showError('Failed to test template: ' + error.message);
+                
+                // Fallback to simulation
+                const results = simulateTemplateTest(selectedTemplate, output);
+                displayTestResults(results);
+            } finally {
+                testButton.innerHTML = originalContent;
+                testButton.disabled = false;
+                updateTestButton();
+            }
+        }
+
+        function simulateTemplateTest(template, output) {
+            const results = {};
+            
+            if (!template.rules) {
+                return results;
+            }
+            
+            template.rules.forEach(rule => {
+                try {
+                    let value = null;
+                    
+                    switch (rule.type) {
+                        case 'REGEX':
+                            const regex = new RegExp(rule.pattern, 'gm');
+                            const match = regex.exec(output);
+                            if (match) {
+                                const groupIndex = parseInt(rule.extractionGroup) || 1;
+                                value = match[groupIndex] || match[0];
+                                if (rule.transform) {
+                                    value = applyTransformation(value, rule.transform);
+                                }
+                            }
+                            break;
+                            
+                        case 'GREP':
+                            const lines = output.split('\n');
+                            const grepRegex = new RegExp(rule.pattern, 'i');
+                            const matchingLines = lines.filter(line => grepRegex.test(line));
+                            value = matchingLines.join('\n');
+                            break;
+                            
+                        case 'LINE_COUNT':
+                            const countLines = output.split('\n');
+                            const countRegex = new RegExp(rule.pattern, 'gm');
+                            const count = countLines.filter(line => countRegex.test(line)).length;
+                            value = count.toString();
+                            break;
+                            
+                        case 'CONTAINS':
+                            const containsRegex = new RegExp(rule.pattern, 'i');
+                            value = containsRegex.test(output) ? 'true' : 'false';
+                            break;
+                            
+                        case 'KEY_VALUE':
+                            const kvRegex = new RegExp(rule.pattern + '\\s*[:=]\\s*(.+)', 'i');
+                            const kvMatch = kvRegex.exec(output);
+                            if (kvMatch) {
+                                value = kvMatch[1].trim();
+                            }
+                            break;
+                    }
+                    
+                    results[rule.variableName] = value || rule.defaultValue || '';
+                    
+                } catch (error) {
+                    results[rule.variableName] = 'Error: ' + error.message;
+                }
+            });
+            
+            return results;
+        }
+
+        function applyTransformation(value, transformation) {
+            if (!value || !transformation) return value;
+            
+            switch (transformation.toLowerCase()) {
+                case 'uppercase': return value.toUpperCase();
+                case 'lowercase': return value.toLowerCase();
+                case 'trim': return value.trim();
+                case 'replace_spaces': return value.replace(/\s+/g, '_');
+                case 'extract_number': 
+                    const match = value.match(/(\d+)/);
+                    return match ? match[1] : value;
+                default: return value;
+            }
+        }
+
+        function displayTestResults(results) {
+            const container = document.getElementById('testResults');
+            
+            if (Object.keys(results).length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-4 text-warning">
+                        <i class="fas fa-exclamation-triangle fa-2x mb-3"></i>
+                        <h6>No variables extracted</h6>
+                        <p>The template didn't extract any variables from the provided output.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            const variableCount = Object.keys(results).length;
+            const successCount = Object.values(results).filter(v => v && v !== '' && !v.startsWith('Error:')).length;
+            
+            container.innerHTML = `
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <div class="card bg-primary text-white">
+                            <div class="card-body text-center">
+                                <h4>${variableCount}</h4>
+                                <small>Total Variables</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card bg-success text-white">
+                            <div class="card-body text-center">
+                                <h4>${successCount}</h4>
+                                <small>Extracted</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card bg-warning text-white">
+                            <div class="card-body text-center">
+                                <h4>${Math.round((successCount / variableCount) * 100)}%</h4>
+                                <small>Success Rate</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <h6>Extracted Variables:</h6>
+                ${Object.entries(results).map(([key, value]) => {
+                    let cssClass = 'success';
+                    let icon = 'check-circle';
+                    
+                    if (!value || value === '') {
+                        cssClass = 'empty';
+                        icon = 'exclamation-triangle';
+                    } else if (value.startsWith('Error:')) {
+                        cssClass = 'error';
+                        icon = 'times-circle';
+                    }
+                    
+                    return `
+                        <div class="variable-result ${cssClass}">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <strong><i class="fas fa-${icon} me-2"></i>\${${key}}</strong>
+                                    <div class="mt-1">
+                                        <code>${escapeHtml(value || '(empty)')}</code>
+                                    </div>
+                                </div>
+                                <div class="text-end">
+                                    <small class="text-muted">${value ? value.length + ' chars' : 'empty'}</small>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
+            `;
+        }
+
+        function exportResults() {
+            if (!lastTestResults) {
+                showError('No test results to export');
+                return;
+            }
+            
+            const exportData = {
+                timestamp: new Date().toISOString(),
+                template: {
+                    id: lastTestResults.template.id,
+                    name: lastTestResults.template.name,
+                    deviceType: lastTestResults.template.deviceType
+                },
+                output: lastTestResults.output,
+                results: lastTestResults.results,
+                summary: {
+                    totalVariables: Object.keys(lastTestResults.results).length,
+                    extractedVariables: Object.values(lastTestResults.results).filter(v => v && v !== '' && !v.startsWith('Error:')).length
+                }
+            };
+            
+            const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `template_test_${lastTestResults.template.id}_${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function compareTemplates() {
+            // Populate template options for comparison
+            const templateOptions = allTemplates.map(t => 
+                `<option value="${t.id}">${t.name} (${t.deviceType})</option>`
+            ).join('');
+            
+            document.getElementById('templateA').innerHTML = '<option value="">Select template...</option>' + templateOptions;
+            document.getElementById('templateB').innerHTML = '<option value="">Select template...</option>' + templateOptions;
+            
+            // Pre-select current template in A
+            if (selectedTemplate) {
+                document.getElementById('templateA').value = selectedTemplate.id;
+            }
+            
+            new bootstrap.Modal(document.getElementById('compareModal')).show();
+        }
+
+        async function runComparison() {
+            const templateAId = document.getElementById('templateA').value;
+            const templateBId = document.getElementById('templateB').value;
+            
+            if (!templateAId || !templateBId) {
+                showError('Please select both templates for comparison');
+                return;
+            }
+            
+            if (!commandOutputEditor || !commandOutputEditor.getValue().trim()) {
+                showError('Please enter command output to test against');
+                return;
+            }
+            
+            const output = commandOutputEditor.getValue();
+            const templateA = allTemplates.find(t => t.id === templateAId);
+            const templateB = allTemplates.find(t => t.id === templateBId);
+            
+            // Test both templates
+            const resultsA = simulateTemplateTest(templateA, output);
+            const resultsB = simulateTemplateTest(templateB, output);
+            
+            // Display comparison results
+            displayComparisonResults('resultsA', templateA, resultsA);
+            displayComparisonResults('resultsB', templateB, resultsB);
+        }
+
+        function displayComparisonResults(containerId, template, results) {
+            const container = document.getElementById(containerId);
+            const variableCount = Object.keys(results).length;
+            const successCount = Object.values(results).filter(v => v && v !== '' && !v.startsWith('Error:')).length;
+            
+            container.innerHTML = `
+                <div class="mb-3">
+                    <h6>${template.name}</h6>
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="card bg-primary text-white">
+                                <div class="card-body text-center p-2">
+                                    <h6>${variableCount}</h6>
+                                    <small>Variables</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="card bg-success text-white">
+                                <div class="card-body text-center p-2">
+                                    <h6>${successCount}</h6>
+                                    <small>Extracted</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="small">
+                    ${Object.entries(results).slice(0, 5).map(([key, value]) => `
+                        <div class="mb-1">
+                            <strong>\${${key}}:</strong> <code>${escapeHtml(value || '(empty)')}</code>
+                        </div>
+                    `).join('')}
+                    ${Object.keys(results).length > 5 ? `<div class="text-muted">... and ${Object.keys(results).length - 5} more</div>` : ''}
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>
