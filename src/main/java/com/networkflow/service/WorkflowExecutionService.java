@@ -349,18 +349,107 @@ public class WorkflowExecutionService {
     }
 
     private boolean evaluateCondition(WorkflowExecution execution, String condition) {
-        // Simple condition evaluation - can be extended with expression parser
-        // For now, just check if a variable exists and equals a value
-        if (condition.contains("==")) {
-            String[] parts = condition.split("==");
-            if (parts.length == 2) {
-                String varName = parts[0].trim().replace("${", "").replace("}", "");
-                String expectedValue = parts[1].trim().replace("\"", "");
-                Object actualValue = execution.getVariable(varName);
-                return expectedValue.equals(String.valueOf(actualValue));
+        // Enhanced condition evaluation with pattern matching
+        try {
+            if (condition.contains("==")) {
+                String[] parts = condition.split("==");
+                if (parts.length == 2) {
+                    String varName = parts[0].trim().replace("${", "").replace("}", "");
+                    String expectedValue = parts[1].trim().replace("\"", "");
+                    Object actualValue = execution.getVariable(varName);
+                    
+                    // Special handling for VLAN verification
+                    if (varName.contains("vlan") && expectedValue.equals("success")) {
+                        return evaluateVlanSuccess(String.valueOf(actualValue));
+                    }
+                    
+                    // Special handling for interface verification  
+                    if (varName.contains("interface") && expectedValue.equals("success")) {
+                        return evaluateInterfaceSuccess(String.valueOf(actualValue));
+                    }
+                    
+                    // Standard string comparison
+                    return expectedValue.equals(String.valueOf(actualValue));
+                }
             }
+            
+            // Support for contains operations
+            if (condition.contains("contains")) {
+                String[] parts = condition.split("contains");
+                if (parts.length == 2) {
+                    String varName = parts[0].trim().replace("${", "").replace("}", "");
+                    String searchText = parts[1].trim().replace("\"", "").replace("'", "");
+                    Object actualValue = execution.getVariable(varName);
+                    return String.valueOf(actualValue).toLowerCase().contains(searchText.toLowerCase());
+                }
+            }
+            
+            // Support for greater than operations
+            if (condition.contains(">")) {
+                String[] parts = condition.split(">");
+                if (parts.length == 2) {
+                    String varName = parts[0].trim().replace("${", "").replace("}", "");
+                    String thresholdStr = parts[1].trim();
+                    Object actualValue = execution.getVariable(varName);
+                    try {
+                        double actual = Double.parseDouble(String.valueOf(actualValue));
+                        double threshold = Double.parseDouble(thresholdStr);
+                        return actual > threshold;
+                    } catch (NumberFormatException e) {
+                        logger.warn("Could not parse numeric values for comparison: {} > {}", actualValue, thresholdStr);
+                    }
+                }
+            }
+            
+        } catch (Exception e) {
+            logger.error("Error evaluating condition: {}", condition, e);
         }
         return false;
+    }
+    
+    /**
+     * Evaluate VLAN configuration success based on command output
+     */
+    private boolean evaluateVlanSuccess(String output) {
+        if (output == null || output.trim().isEmpty()) {
+            return false;
+        }
+        
+        String lowerOutput = output.toLowerCase();
+        
+        // Check for VLAN existence indicators
+        boolean vlanExists = lowerOutput.contains("vlan") && 
+                           (lowerOutput.contains("active") || lowerOutput.contains("operational"));
+        
+        // Check for error indicators
+        boolean hasErrors = lowerOutput.contains("error") || 
+                          lowerOutput.contains("invalid") || 
+                          lowerOutput.contains("failed") ||
+                          lowerOutput.contains("not found");
+        
+        return vlanExists && !hasErrors;
+    }
+    
+    /**
+     * Evaluate interface configuration success based on command output  
+     */
+    private boolean evaluateInterfaceSuccess(String output) {
+        if (output == null || output.trim().isEmpty()) {
+            return false;
+        }
+        
+        String lowerOutput = output.toLowerCase();
+        
+        // Check for successful interface configuration
+        boolean interfaceUp = lowerOutput.contains("up") || lowerOutput.contains("operational");
+        boolean switchportConfigured = lowerOutput.contains("switchport") && lowerOutput.contains("access");
+        
+        // Check for error indicators
+        boolean hasErrors = lowerOutput.contains("error") || 
+                          lowerOutput.contains("down") || 
+                          lowerOutput.contains("failed");
+        
+        return (interfaceUp || switchportConfigured) && !hasErrors;
     }
 
     private List<WorkflowTask> findStartingTasks(Workflow workflow) {
