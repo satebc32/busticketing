@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 """
 Netmiko executor script for device configuration
 Executes network device commands using the Netmiko library
@@ -171,7 +171,7 @@ def validate_device_config(device_config):
 def main():
     """Main execution function"""
     if len(sys.argv) < 2:
-        print("Usage: python3 netmiko_executor.py <config_file> [output_file]")
+        print("Usage: python netmiko_executor.py <config_file> [output_file]")
         sys.exit(1)
     
     config_file = sys.argv[1]

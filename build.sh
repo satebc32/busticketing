@@ -15,9 +15,13 @@ java -version
 echo "Checking Maven..."
 mvn -version
 
-# Check Python
-echo "Checking Python..."
-python3 --version
+echo "Checking Python installation..."
+python --version
+if [ $? -ne 0 ]; then
+    echo "Python is not installed or not in PATH"
+    echo "Please install Python and ensure it's accessible"
+    exit 1
+fi
 
 # Install Python dependencies
 echo "Installing Python dependencies..."

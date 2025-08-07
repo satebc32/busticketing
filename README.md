@@ -27,9 +27,22 @@ A **Spring Boot web-based** drag-and-drop workflow builder for network device co
 ## Prerequisites
 
 - **Java 17** or higher
-- **Python 3.7** or higher
+- **Python 3.7** or higher (accessible as `python` command)
 - **Maven 3.6** or higher
 - **Modern Web Browser** (Chrome, Firefox, Safari, Edge)
+
+### Python Setup Note
+The application uses the `python` command (not `python3`). Ensure Python is accessible via:
+```bash
+python --version  # Should show Python 3.7+
+```
+If you only have `python3`, create a symlink or alias:
+```bash
+# On Linux/Mac:
+sudo ln -s /usr/bin/python3 /usr/local/bin/python
+# Or add to ~/.bashrc:
+alias python=python3
+```
 
 ## Installation
 

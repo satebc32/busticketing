@@ -24,7 +24,7 @@ public class NetmikoService {
 
     public NetmikoService() {
         this.objectMapper = new ObjectMapper();
-        this.pythonExecutable = "python3"; // Can be configured
+        this.pythonExecutable = "python"; // Can be configured
         this.netmikoScriptPath = "python/netmiko_executor.py";
     }
 

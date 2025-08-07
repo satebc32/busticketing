@@ -81,16 +81,16 @@ management:
 # Application specific configuration
 workflow:
   execution:
-    thread-pool-size: 10
+    thread-pool-size: 5
     timeout-seconds: 300
   python:
-    executable: python3
+    executable: python
     script-path: python/netmiko_executor.py
   templates:
     directory: templates
     auto-load: true
   storage:
-    type: memory # Options: memory, database, file
+    type: file # or database
     backup-enabled: true
     
 # WebJars configuration
