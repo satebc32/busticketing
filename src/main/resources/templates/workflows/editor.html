@@ -685,12 +685,12 @@
                         <div class="alert alert-info mt-2">
                             <small>
                                 <strong><i class="fas fa-info-circle"></i> Auto-Generated Variables:</strong><br>
-                                • Task results: <code>\${task_name_result}</code> (success/failed)<br>
-                                • Task outputs: <code>\${task_name_output}</code> (full command output)<br>
-                                • VLAN tasks: <code>\${vlan_status}</code>, <code>\${vlan_[id]_status}</code><br>
-                                • Interface tasks: <code>\${interface_status}</code><br>
-                                • Ping tasks: <code>\${ping_status}</code><br>
-                                • Verification tasks: <code>\${verification_status}</code>
+                                • <strong>Generic:</strong> <code>\${generic_status}</code>, <code>\${command_status}</code> (success/failed)<br>
+                                • <strong>Task Results:</strong> <code>\${task_name_result}</code>, <code>\${task_name_output}</code><br>
+                                • <strong>Specialized:</strong> <code>\${vlan_status}</code>, <code>\${interface_status}</code>, <code>\${ping_status}</code><br>
+                                • <strong>Advanced:</strong> <code>\${route_status}</code>, <code>\${save_status}</code>, <code>\${show_status}</code><br>
+                                • <strong>Confidence:</strong> <code>\${success_confidence}</code>, <code>\${failure_confidence}</code> (numeric scores)<br>
+                                • <strong>VLAN IDs:</strong> <code>\${vlan_[id]_status}</code> (e.g., vlan_100_status)
                             </small>
                         </div>
                     `);

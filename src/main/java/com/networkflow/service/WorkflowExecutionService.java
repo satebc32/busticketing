@@ -479,6 +479,195 @@ public class WorkflowExecutionService {
         return (interfaceUp || switchportConfigured) && !hasErrors;
     }
 
+    /**
+     * Generic success verification based on command output analysis
+     */
+    private boolean evaluateGenericSuccess(String output, String taskName) {
+        if (output == null || output.trim().isEmpty()) {
+            return false;
+        }
+        
+        String lowerOutput = output.toLowerCase();
+        String lowerTaskName = taskName != null ? taskName.toLowerCase() : "";
+        
+        // Calculate success score based on multiple factors
+        int successScore = 0;
+        int failureScore = 0;
+        
+        // Generic success indicators (each adds +1 to success score)
+        String[] successIndicators = {
+            "success", "successful", "ok", "up", "active", "operational", 
+            "enabled", "configured", "applied", "completed", "established",
+            "connected", "reachable", "online", "ready", "valid", "accepted"
+        };
+        
+        // Generic failure indicators (each adds +1 to failure score)
+        String[] failureIndicators = {
+            "error", "failed", "failure", "down", "inactive", "disabled",
+            "unreachable", "timeout", "invalid", "rejected", "denied",
+            "not found", "not configured", "not reachable", "connection refused",
+            "authentication failed", "command not found", "syntax error"
+        };
+        
+        // Count success indicators
+        for (String indicator : successIndicators) {
+            if (lowerOutput.contains(indicator)) {
+                successScore++;
+            }
+        }
+        
+        // Count failure indicators  
+        for (String indicator : failureIndicators) {
+            if (lowerOutput.contains(indicator)) {
+                failureScore++;
+            }
+        }
+        
+        // Context-specific success patterns
+        successScore += evaluateContextualSuccess(lowerOutput, lowerTaskName);
+        
+        // Context-specific failure patterns
+        failureScore += evaluateContextualFailures(lowerOutput, lowerTaskName);
+        
+        // Decision logic: success if more success indicators than failure indicators
+        // and at least one positive indicator
+        return successScore > failureScore && successScore > 0;
+    }
+    
+    /**
+     * Evaluate context-specific success patterns based on task type and output
+     */
+    private int evaluateContextualSuccess(String lowerOutput, String lowerTaskName) {
+        int score = 0;
+        
+        // VLAN-specific success patterns
+        if (lowerTaskName.contains("vlan") || lowerOutput.contains("vlan")) {
+            if (lowerOutput.matches(".*vlan\\s+\\d+.*active.*")) score += 2;
+            if (lowerOutput.contains("switchport access vlan")) score += 2;
+            if (lowerOutput.contains("vlan database")) score += 1;
+        }
+        
+        // Interface-specific success patterns
+        if (lowerTaskName.contains("interface") || lowerOutput.contains("interface")) {
+            if (lowerOutput.matches(".*interface.*up.*up.*")) score += 2; // "up/up" status
+            if (lowerOutput.contains("line protocol is up")) score += 2;
+            if (lowerOutput.contains("switchport mode")) score += 1;
+        }
+        
+        // Routing-specific success patterns
+        if (lowerTaskName.contains("route") || lowerOutput.contains("route")) {
+            if (lowerOutput.contains("connected") && lowerOutput.contains("via")) score += 2;
+            if (lowerOutput.matches(".*\\d+\\.\\d+\\.\\d+\\.\\d+/\\d+.*")) score += 1; // IP/mask pattern
+        }
+        
+        // Configuration save success
+        if (lowerTaskName.contains("save") || lowerTaskName.contains("write")) {
+            if (lowerOutput.contains("building configuration")) score += 2;
+            if (lowerOutput.contains("[ok]") || lowerOutput.contains("saved")) score += 2;
+        }
+        
+        // Connectivity tests
+        if (lowerTaskName.contains("ping") || lowerOutput.contains("ping")) {
+            if (lowerOutput.matches(".*\\d+\\s+packets.*\\d+\\s+received.*")) score += 2;
+            if (lowerOutput.contains("reply from")) score += 1;
+        }
+        
+        // Show commands generally successful if they return structured data
+        if (lowerTaskName.startsWith("show") || lowerOutput.contains("show")) {
+            if (lowerOutput.length() > 50 && !lowerOutput.contains("invalid")) score += 1;
+            if (lowerOutput.contains("|") || lowerOutput.contains("----")) score += 1; // Table format
+        }
+        
+        // Configuration mode success
+        if (lowerOutput.contains("config)#") || lowerOutput.contains("(config")) {
+            score += 1;
+        }
+        
+        return score;
+    }
+    
+    /**
+     * Evaluate context-specific failure patterns
+     */
+    private int evaluateContextualFailures(String lowerOutput, String lowerTaskName) {
+        int score = 0;
+        
+        // Network-specific error patterns
+        if (lowerOutput.contains("% invalid") || lowerOutput.contains("% incomplete")) score += 2;
+        if (lowerOutput.contains("% ambiguous command")) score += 2;
+        if (lowerOutput.contains("% unknown command")) score += 2;
+        
+        // Authentication failures
+        if (lowerOutput.contains("authentication failed") || 
+            lowerOutput.contains("login incorrect") ||
+            lowerOutput.contains("access denied")) score += 3;
+        
+        // Connection failures  
+        if (lowerOutput.contains("connection timed out") ||
+            lowerOutput.contains("no route to host") ||
+            lowerOutput.contains("connection refused")) score += 3;
+        
+        // Configuration errors
+        if (lowerOutput.contains("configuration error") ||
+            lowerOutput.contains("syntax error") ||
+            lowerOutput.contains("invalid input")) score += 2;
+        
+        // Device-specific failures
+        if (lowerOutput.contains("device not found") ||
+            lowerOutput.contains("no such interface") ||
+            lowerOutput.contains("vlan does not exist")) score += 2;
+        
+        return score;
+    }
+    
+    /**
+     * Enhanced success evaluation that combines specialized and generic checks
+     */
+    private boolean evaluateOutputSuccess(String output, String taskName, String taskType) {
+        if (output == null || output.trim().isEmpty()) {
+            return false;
+        }
+        
+        // Try specialized evaluation first
+        switch (taskType.toLowerCase()) {
+            case "vlan":
+                return evaluateVlanSuccess(output);
+            case "interface":
+                return evaluateInterfaceSuccess(output);
+            case "ping":
+            case "connectivity":
+                return evaluatePingSuccess(output);
+            default:
+                // Fall back to generic evaluation
+                return evaluateGenericSuccess(output, taskName);
+        }
+    }
+    
+    /**
+     * Enhanced ping success evaluation
+     */
+    private boolean evaluatePingSuccess(String output) {
+        if (output == null || output.trim().isEmpty()) {
+            return false;
+        }
+        
+        String lowerOutput = output.toLowerCase();
+        
+        // Positive ping indicators
+        boolean hasSuccess = lowerOutput.contains("reply from") ||
+                           lowerOutput.contains("64 bytes from") ||
+                           lowerOutput.contains("ping statistics") ||
+                           lowerOutput.matches(".*\\d+\\s+packets.*\\d+\\s+received.*0%\\s+packet\\s+loss.*");
+        
+        // Negative ping indicators
+        boolean hasFailure = lowerOutput.contains("destination host unreachable") ||
+                           lowerOutput.contains("request timed out") ||
+                           lowerOutput.contains("100% packet loss") ||
+                           lowerOutput.contains("ping: cannot resolve");
+        
+        return hasSuccess && !hasFailure;
+    }
+
     private List<WorkflowTask> findStartingTasks(Workflow workflow) {
         Set<String> tasksWithPredecessors = new HashSet<>();
         for (TaskConnection connection : workflow.getConnections()) {
@@ -557,9 +746,13 @@ public class WorkflowExecutionService {
         String taskName = task.getName().toLowerCase();
         String outputLower = output.toLowerCase();
         
+        // Use enhanced generic success evaluation
+        boolean genericSuccess = evaluateGenericSuccess(output, taskName);
+        execution.setVariable("generic_status", genericSuccess ? "success" : "failed");
+        
         // VLAN-specific variable detection
         if (taskName.contains("vlan")) {
-            boolean vlanSuccess = evaluateVlanSuccess(output);
+            boolean vlanSuccess = evaluateOutputSuccess(output, taskName, "vlan");
             execution.setVariable("vlan_status", vlanSuccess ? "success" : "failed");
             
             // Extract VLAN ID if present in task parameters
@@ -572,25 +765,95 @@ public class WorkflowExecutionService {
         
         // Interface-specific variable detection
         if (taskName.contains("interface") || outputLower.contains("interface")) {
-            boolean interfaceSuccess = evaluateInterfaceSuccess(output);
+            boolean interfaceSuccess = evaluateOutputSuccess(output, taskName, "interface");
             execution.setVariable("interface_status", interfaceSuccess ? "success" : "failed");
         }
         
         // Ping/connectivity detection
         if (taskName.contains("ping") || outputLower.contains("ping")) {
-            boolean pingSuccess = outputLower.contains("success") || 
-                                outputLower.contains("reply") || 
-                                outputLower.contains("reachable");
+            boolean pingSuccess = evaluateOutputSuccess(output, taskName, "ping");
             execution.setVariable("ping_status", pingSuccess ? "success" : "failed");
         }
         
         // Configuration verification detection
         if (taskName.contains("verify") || taskName.contains("check")) {
-            boolean verificationSuccess = !outputLower.contains("error") && 
-                                        !outputLower.contains("failed") &&
-                                        !outputLower.contains("not found");
+            boolean verificationSuccess = evaluateGenericSuccess(output, taskName);
             execution.setVariable("verification_status", verificationSuccess ? "success" : "failed");
         }
+        
+        // Route/routing detection
+        if (taskName.contains("route") || taskName.contains("routing")) {
+            boolean routeSuccess = evaluateGenericSuccess(output, taskName);
+            execution.setVariable("route_status", routeSuccess ? "success" : "failed");
+        }
+        
+        // Configuration save detection  
+        if (taskName.contains("save") || taskName.contains("write") || taskName.contains("copy")) {
+            boolean saveSuccess = evaluateGenericSuccess(output, taskName);
+            execution.setVariable("save_status", saveSuccess ? "success" : "failed");
+        }
+        
+        // Show command detection
+        if (taskName.startsWith("show") || taskName.contains("display")) {
+            boolean showSuccess = evaluateGenericSuccess(output, taskName);
+            execution.setVariable("show_status", showSuccess ? "success" : "failed");
+        }
+        
+        // Generic command success (always available)
+        execution.setVariable("command_status", genericSuccess ? "success" : "failed");
+        
+        // Set confidence score for debugging
+        int successScore = countSuccessIndicators(output, taskName);
+        int failureScore = countFailureIndicators(output, taskName);
+        execution.setVariable("success_confidence", successScore);
+        execution.setVariable("failure_confidence", failureScore);
+    }
+    
+    /**
+     * Count success indicators for confidence scoring
+     */
+    private int countSuccessIndicators(String output, String taskName) {
+        if (output == null) return 0;
+        
+        String lowerOutput = output.toLowerCase();
+        String lowerTaskName = taskName != null ? taskName.toLowerCase() : "";
+        
+        int score = 0;
+        String[] indicators = {
+            "success", "successful", "ok", "up", "active", "operational", 
+            "enabled", "configured", "applied", "completed", "established",
+            "connected", "reachable", "online", "ready", "valid", "accepted"
+        };
+        
+        for (String indicator : indicators) {
+            if (lowerOutput.contains(indicator)) score++;
+        }
+        
+        return score + evaluateContextualSuccess(lowerOutput, lowerTaskName);
+    }
+    
+    /**
+     * Count failure indicators for confidence scoring
+     */
+    private int countFailureIndicators(String output, String taskName) {
+        if (output == null) return 0;
+        
+        String lowerOutput = output.toLowerCase();
+        String lowerTaskName = taskName != null ? taskName.toLowerCase() : "";
+        
+        int score = 0;
+        String[] indicators = {
+            "error", "failed", "failure", "down", "inactive", "disabled",
+            "unreachable", "timeout", "invalid", "rejected", "denied",
+            "not found", "not configured", "not reachable", "connection refused",
+            "authentication failed", "command not found", "syntax error"
+        };
+        
+        for (String indicator : indicators) {
+            if (lowerOutput.contains(indicator)) score++;
+        }
+        
+        return score + evaluateContextualFailures(lowerOutput, lowerTaskName);
     }
 
     // Inner classes

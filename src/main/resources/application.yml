@@ -97,3 +97,113 @@ workflow:
 webjars:
   locator-cache:
     enabled: true
+
+networkflow:
+  execution:
+    thread-pool-size: 5
+  python:
+    executable: python
+    script-path: python/netmiko_executor.py
+  template:
+    directory: templates/
+  storage:
+    type: file # or database
+  
+  # Generic Output Success Verification Configuration
+  verification:
+    # Global success indicators (case-insensitive)
+    success-patterns:
+      - "success"
+      - "successful" 
+      - "ok"
+      - "up"
+      - "active"
+      - "operational"
+      - "enabled" 
+      - "configured"
+      - "applied"
+      - "completed"
+      - "established"
+      - "connected"
+      - "reachable"
+      - "online"
+      - "ready"
+      - "valid"
+      - "accepted"
+      - "building configuration"
+      - "[ok]"
+      - "saved"
+      
+    # Global failure indicators (case-insensitive)  
+    failure-patterns:
+      - "error"
+      - "failed"
+      - "failure"
+      - "down"
+      - "inactive"
+      - "disabled"
+      - "unreachable"
+      - "timeout"
+      - "invalid"
+      - "rejected"
+      - "denied"
+      - "not found"
+      - "not configured"
+      - "not reachable"
+      - "connection refused"
+      - "authentication failed"
+      - "command not found"
+      - "syntax error"
+      - "% invalid"
+      - "% incomplete"
+      - "% ambiguous command"
+      - "% unknown command"
+      - "login incorrect"
+      - "access denied"
+      - "connection timed out"
+      - "no route to host"
+      - "configuration error"
+      - "invalid input"
+      - "device not found"
+      - "no such interface"
+      - "vlan does not exist"
+      
+    # Context-specific patterns
+    contexts:
+      vlan:
+        success-patterns:
+          - "vlan.*active"
+          - "switchport access vlan"
+          - "vlan database"
+        failure-patterns:
+          - "vlan.*not.*found"
+          - "invalid vlan"
+          
+      interface:
+        success-patterns:
+          - "line protocol is up"
+          - "interface.*up.*up"
+          - "switchport mode"
+        failure-patterns:
+          - "interface.*down"
+          - "no such interface"
+          
+      ping:
+        success-patterns:
+          - "reply from"
+          - "64 bytes from"
+          - "ping statistics"
+          - "\\d+\\s+packets.*\\d+\\s+received.*0%\\s+packet\\s+loss"
+        failure-patterns:
+          - "destination host unreachable"
+          - "request timed out"
+          - "100% packet loss"
+          - "ping: cannot resolve"
+          
+      routing:
+        success-patterns:
+          - "connected.*via"
+          - "\\d+\\.\\d+\\.\\d+\\.\\d+/\\d+"
+        failure-patterns:
+          - "no route"
+          - "routing table empty"
