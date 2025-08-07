@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Template Editor - Output Parsing</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.0/codemirror.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.0/theme/material.min.css" rel="stylesheet">
+    <link href="/css/app.css" rel="stylesheet">
+    <style>
+        .rule-item {
+            border: 1px solid #dee2e6;
+            border-radius: 0.375rem;
+            margin-bottom: 1rem;
+            background: #f8f9fa;
+        }
+        .rule-item.active {
+            border-color: #0d6efd;
+            background: #e7f1ff;
+        }
+        .rule-header {
+            background: #e9ecef;
+            padding: 0.75rem;
+            border-radius: 0.375rem 0.375rem 0 0;
+            cursor: pointer;
+        }
+        .rule-body {
+            padding: 1rem;
+        }
+        .parsing-type-badge {
+            font-size: 0.75rem;
+        }
+        .variable-preview {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 0.25rem;
+            padding: 0.5rem;
+            font-family: monospace;
+            font-size: 0.875rem;
+        }
+        .test-output-area {
+            background: #1e1e1e;
+            color: #fff;
+            font-family: 'Courier New', monospace;
+            padding: 1rem;
+            border-radius: 0.375rem;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .match-highlight {
+            background-color: #ffc107;
+            color: #000;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+        .CodeMirror {
+            height: 150px;
+            border: 1px solid #dee2e6;
+            border-radius: 0.375rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-network-wired me-2"></i>Network Workflow
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/workflows">Workflows</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/templates">Templates</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/output-parsing">Output Parsing</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container mt-4">
+        <!-- Header -->
+        <div class="row mb-4">
+            <div class="col">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h1>
+                            <i class="fas fa-magic text-primary me-2"></i>
+                            <span id="pageTitle">Create Output Parsing Template</span>
+                        </h1>
+                        <p class="text-muted">Define parsing rules to automatically extract variables from command output.</p>
+                    </div>
+                    <div>
+                        <button class="btn btn-outline-secondary me-2" onclick="testTemplate()">
+                            <i class="fas fa-vial me-2"></i>Test Template
+                        </button>
+                        <button class="btn btn-outline-secondary me-2" onclick="previewTemplate()">
+                            <i class="fas fa-eye me-2"></i>Preview
+                        </button>
+                        <button class="btn btn-success me-2" onclick="saveTemplate()">
+                            <i class="fas fa-save me-2"></i>Save
+                        </button>
+                        <button class="btn btn-outline-danger" onclick="cancelEdit()">
+                            <i class="fas fa-times me-2"></i>Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Template Form -->
+        <div class="row">
+            <!-- Basic Information -->
+            <div class="col-md-8">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-info-circle me-2"></i>Basic Information
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Template Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="templateName" placeholder="e.g., VLAN Status Parser" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Template ID</label>
+                                <input type="text" class="form-control" id="templateId" placeholder="Auto-generated" readonly>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Device Type</label>
+                                <select class="form-select" id="deviceType">
+                                    <option value="generic">Generic (All Devices)</option>
+                                    <option value="cisco">Cisco</option>
+                                    <option value="arista">Arista</option>
+                                    <option value="juniper">Juniper</option>
+                                    <option value="huawei">Huawei</option>
+                                    <option value="mikrotik">MikroTik</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Command Pattern (Regex)</label>
+                                <input type="text" class="form-control" id="commandPattern" placeholder="e.g., show\\s+vlan">
+                                <div class="form-text">Regular expression to match commands this template applies to</div>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Description</label>
+                                <textarea class="form-control" id="templateDescription" rows="2" placeholder="Describe what this template does..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Parsing Rules -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">
+                                <i class="fas fa-cogs me-2"></i>Parsing Rules 
+                                <span class="badge bg-secondary" id="rulesCount">0</span>
+                            </h5>
+                            <button class="btn btn-primary btn-sm" onclick="addRule()">
+                                <i class="fas fa-plus me-2"></i>Add Rule
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body" id="rulesContainer">
+                        <!-- Rules will be added here -->
+                        <div id="noRulesMessage" class="text-center py-4">
+                            <i class="fas fa-cogs fa-3x text-muted mb-3"></i>
+                            <h6>No parsing rules defined</h6>
+                            <p class="text-muted">Add rules to extract variables from command output.</p>
+                            <button class="btn btn-primary" onclick="addRule()">
+                                <i class="fas fa-plus me-2"></i>Add First Rule
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="col-md-4">
+                <!-- Quick Help -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="fas fa-question-circle me-2"></i>Quick Help
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="accordion" id="helpAccordion">
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#parseTypes">
+                                        Parsing Types
+                                    </button>
+                                </h2>
+                                <div id="parseTypes" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+                                    <div class="accordion-body small">
+                                        <strong>REGEX:</strong> Extract using capture groups<br>
+                                        <strong>GREP:</strong> Extract matching lines<br>
+                                        <strong>LINE_COUNT:</strong> Count matching lines<br>
+                                        <strong>CONTAINS:</strong> Check if text exists<br>
+                                        <strong>TABLE:</strong> Parse table structures<br>
+                                        <strong>KEY_VALUE:</strong> Extract key: value pairs
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#regexHelp">
+                                        Regex Examples
+                                    </button>
+                                </h2>
+                                <div id="regexHelp" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+                                    <div class="accordion-body small">
+                                        <code>(\d+)</code> - Capture numbers<br>
+                                        <code>(\w+)</code> - Capture words<br>
+                                        <code>(up|down)</code> - Capture either<br>
+                                        <code>(\d+\.\d+\.\d+\.\d+)</code> - IP addresses<br>
+                                        <code>^(\w+)</code> - Line start<br>
+                                        <code>(\w+)$</code> - Line end
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#transformHelp">
+                                        Transformations
+                                    </button>
+                                </h2>
+                                <div id="transformHelp" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+                                    <div class="accordion-body small">
+                                        <strong>uppercase:</strong> CONVERT TO UPPERCASE<br>
+                                        <strong>lowercase:</strong> convert to lowercase<br>
+                                        <strong>trim:</strong> Remove whitespace<br>
+                                        <strong>replace_spaces:</strong> Replace with _<br>
+                                        <strong>extract_number:</strong> Extract numeric value
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Template Preview -->
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="fas fa-eye me-2"></i>Variables Preview
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div id="variablesPreview" class="variable-preview">
+                            No variables defined yet
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rule Editor Modal -->
+    <div class="modal fade" id="ruleEditorModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-cog me-2"></i>Edit Parsing Rule
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Variable Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="ruleVariableName" placeholder="e.g., vlan_status">
+                            <div class="form-text">Name of the variable to set (alphanumeric and underscores only)</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Parsing Type <span class="text-danger">*</span></label>
+                            <select class="form-select" id="ruleType" onchange="updateRuleTypeHelp()">
+                                <option value="REGEX">REGEX - Extract using regex</option>
+                                <option value="GREP">GREP - Extract matching lines</option>
+                                <option value="LINE_COUNT">LINE_COUNT - Count matching lines</option>
+                                <option value="CONTAINS">CONTAINS - Check if text exists</option>
+                                <option value="TABLE">TABLE - Parse table structure</option>
+                                <option value="KEY_VALUE">KEY_VALUE - Extract key: value</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Pattern <span class="text-danger">*</span></label>
+                            <textarea class="form-control" id="rulePattern" rows="2" placeholder="Enter regex pattern or search text"></textarea>
+                            <div class="form-text" id="patternHelp">Enter the pattern to match in the command output</div>
+                        </div>
+                        <div class="col-md-6" id="extractionGroupDiv">
+                            <label class="form-label">Extraction Group</label>
+                            <input type="number" class="form-control" id="ruleExtractionGroup" value="1" min="0">
+                            <div class="form-text">Which regex capture group to extract (0 = whole match)</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Transform</label>
+                            <select class="form-select" id="ruleTransform">
+                                <option value="">No transformation</option>
+                                <option value="uppercase">Uppercase</option>
+                                <option value="lowercase">Lowercase</option>
+                                <option value="trim">Trim whitespace</option>
+                                <option value="replace_spaces">Replace spaces with _</option>
+                                <option value="extract_number">Extract number</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Default Value</label>
+                            <input type="text" class="form-control" id="ruleDefaultValue" placeholder="Value if not found">
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check mt-4">
+                                <input class="form-check-input" type="checkbox" id="ruleRequired">
+                                <label class="form-check-label" for="ruleRequired">
+                                    Required variable
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Description</label>
+                            <input type="text" class="form-control" id="ruleDescription" placeholder="Describe what this rule extracts">
+                        </div>
+                    </div>
+
+                    <!-- Test Pattern Section -->
+                    <div class="mt-4">
+                        <h6>Test Pattern</h6>
+                        <div class="mb-3">
+                            <label class="form-label">Sample Output</label>
+                            <textarea class="form-control" id="testOutput" rows="4" placeholder="Paste sample command output here to test your pattern..."></textarea>
+                        </div>
+                        <button class="btn btn-outline-primary btn-sm" onclick="testPattern()">
+                            <i class="fas fa-vial me-2"></i>Test Pattern
+                        </button>
+                        <div id="testResult" class="mt-3" style="display: none;">
+                            <div class="alert alert-info">
+                                <strong>Test Result:</strong>
+                                <div id="testResultContent"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="saveRule()">
+                        <i class="fas fa-save me-2"></i>Save Rule
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Test Template Modal -->
+    <div class="modal fade" id="testTemplateModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-vial me-2"></i>Test Template
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Sample Command Output</h6>
+                            <div id="testCommandOutput"></div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Extracted Variables</h6>
+                            <div id="testExtractedVars" class="variable-preview">
+                                Enter sample output to test template...
+                            </div>
+                            <button class="btn btn-primary mt-3" onclick="runTemplateTest()">
+                                <i class="fas fa-play me-2"></i>Run Test
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.0/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.0/mode/shell/shell.min.js"></script>
+    <script src="/js/app.js"></script>
+    <script>
+        let currentTemplate = {
+            id: '',
+            name: '',
+            description: '',
+            deviceType: 'generic',
+            commandPattern: '',
+            rules: []
+        };
+        
+        let editingRuleIndex = -1;
+        let testCommandEditor;
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeTemplate();
+            updateVariablesPreview();
+            
+            // Auto-generate ID from name
+            document.getElementById('templateName').addEventListener('input', function() {
+                const name = this.value;
+                const id = name.toLowerCase()
+                    .replace(/[^a-z0-9\s]/g, '')
+                    .replace(/\s+/g, '_')
+                    .replace(/_+/g, '_')
+                    .replace(/^_|_$/g, '');
+                document.getElementById('templateId').value = id;
+            });
+        });
+
+        function initializeTemplate() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const templateId = getTemplateIdFromPath();
+            
+            if (templateId && templateId !== 'new') {
+                loadTemplate(templateId);
+                document.getElementById('pageTitle').textContent = 'Edit Output Parsing Template';
+            } else {
+                document.getElementById('pageTitle').textContent = 'Create Output Parsing Template';
+            }
+        }
+
+        function getTemplateIdFromPath() {
+            const path = window.location.pathname;
+            const segments = path.split('/');
+            return segments[segments.length - 1];
+        }
+
+        async function loadTemplate(templateId) {
+            try {
+                const response = await fetch(`/api/output-parsing/templates/${templateId}`);
+                if (response.ok) {
+                    currentTemplate = await response.json();
+                    populateForm();
+                } else {
+                    throw new Error('Template not found');
+                }
+            } catch (error) {
+                console.error('Error loading template:', error);
+                showError('Failed to load template: ' + error.message);
+            }
+        }
+
+        function populateForm() {
+            document.getElementById('templateName').value = currentTemplate.name || '';
+            document.getElementById('templateId').value = currentTemplate.id || '';
+            document.getElementById('templateDescription').value = currentTemplate.description || '';
+            document.getElementById('deviceType').value = currentTemplate.deviceType || 'generic';
+            document.getElementById('commandPattern').value = currentTemplate.commandPattern || '';
+            
+            renderRules();
+            updateVariablesPreview();
+        }
+
+        function renderRules() {
+            const container = document.getElementById('rulesContainer');
+            const noRulesMessage = document.getElementById('noRulesMessage');
+            
+            if (!currentTemplate.rules || currentTemplate.rules.length === 0) {
+                noRulesMessage.style.display = 'block';
+                document.getElementById('rulesCount').textContent = '0';
+                return;
+            }
+            
+            noRulesMessage.style.display = 'none';
+            document.getElementById('rulesCount').textContent = currentTemplate.rules.length;
+            
+            const rulesHtml = currentTemplate.rules.map((rule, index) => `
+                <div class="rule-item" data-index="${index}">
+                    <div class="rule-header" onclick="toggleRule(${index})">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong><code>\${${rule.variableName}}</code></strong>
+                                <span class="badge bg-secondary parsing-type-badge ms-2">${rule.type}</span>
+                            </div>
+                            <div>
+                                <button class="btn btn-sm btn-outline-primary me-2" onclick="editRule(${index}); event.stopPropagation();">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="deleteRule(${index}); event.stopPropagation();">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                                <i class="fas fa-chevron-down ms-2"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="rule-body" id="ruleBody${index}" style="display: none;">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <strong>Pattern:</strong><br>
+                                <code class="small">${escapeHtml(rule.pattern)}</code>
+                                ${rule.description ? `<br><br><strong>Description:</strong><br>${escapeHtml(rule.description)}` : ''}
+                            </div>
+                            <div class="col-md-4">
+                                ${rule.extractionGroup ? `<strong>Group:</strong> ${rule.extractionGroup}<br>` : ''}
+                                ${rule.transform ? `<strong>Transform:</strong> ${rule.transform}<br>` : ''}
+                                ${rule.defaultValue ? `<strong>Default:</strong> ${escapeHtml(rule.defaultValue)}<br>` : ''}
+                                ${rule.required ? '<span class="badge bg-warning">Required</span>' : ''}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            
+            // Insert rules after the no rules message
+            noRulesMessage.insertAdjacentHTML('afterend', rulesHtml);
+        }
+
+        function toggleRule(index) {
+            const body = document.getElementById(`ruleBody${index}`);
+            const isVisible = body.style.display !== 'none';
+            body.style.display = isVisible ? 'none' : 'block';
+            
+            const icon = document.querySelector(`[data-index="${index}"] .fa-chevron-down`);
+            icon.style.transform = isVisible ? 'rotate(0deg)' : 'rotate(180deg)';
+        }
+
+        function addRule() {
+            editingRuleIndex = -1;
+            clearRuleForm();
+            new bootstrap.Modal(document.getElementById('ruleEditorModal')).show();
+        }
+
+        function editRule(index) {
+            editingRuleIndex = index;
+            const rule = currentTemplate.rules[index];
+            populateRuleForm(rule);
+            new bootstrap.Modal(document.getElementById('ruleEditorModal')).show();
+        }
+
+        function deleteRule(index) {
+            if (confirm('Are you sure you want to delete this rule?')) {
+                currentTemplate.rules.splice(index, 1);
+                renderRules();
+                updateVariablesPreview();
+            }
+        }
+
+        function clearRuleForm() {
+            document.getElementById('ruleVariableName').value = '';
+            document.getElementById('ruleType').value = 'REGEX';
+            document.getElementById('rulePattern').value = '';
+            document.getElementById('ruleExtractionGroup').value = '1';
+            document.getElementById('ruleTransform').value = '';
+            document.getElementById('ruleDefaultValue').value = '';
+            document.getElementById('ruleRequired').checked = false;
+            document.getElementById('ruleDescription').value = '';
+            document.getElementById('testOutput').value = '';
+            updateRuleTypeHelp();
+        }
+
+        function populateRuleForm(rule) {
+            document.getElementById('ruleVariableName').value = rule.variableName || '';
+            document.getElementById('ruleType').value = rule.type || 'REGEX';
+            document.getElementById('rulePattern').value = rule.pattern || '';
+            document.getElementById('ruleExtractionGroup').value = rule.extractionGroup || '1';
+            document.getElementById('ruleTransform').value = rule.transform || '';
+            document.getElementById('ruleDefaultValue').value = rule.defaultValue || '';
+            document.getElementById('ruleRequired').checked = rule.required || false;
+            document.getElementById('ruleDescription').value = rule.description || '';
+            updateRuleTypeHelp();
+        }
+
+        function updateRuleTypeHelp() {
+            const type = document.getElementById('ruleType').value;
+            const patternHelp = document.getElementById('patternHelp');
+            const extractionGroupDiv = document.getElementById('extractionGroupDiv');
+            
+            switch (type) {
+                case 'REGEX':
+                    patternHelp.textContent = 'Regular expression with capture groups (e.g., "interface\\s+(\\w+)")';
+                    extractionGroupDiv.style.display = 'block';
+                    break;
+                case 'GREP':
+                    patternHelp.textContent = 'Pattern to find matching lines (e.g., "active" or "error")';
+                    extractionGroupDiv.style.display = 'none';
+                    break;
+                case 'LINE_COUNT':
+                    patternHelp.textContent = 'Pattern to count matching lines (e.g., "^VLAN")';
+                    extractionGroupDiv.style.display = 'none';
+                    break;
+                case 'CONTAINS':
+                    patternHelp.textContent = 'Text to search for (returns true/false)';
+                    extractionGroupDiv.style.display = 'none';
+                    break;
+                case 'TABLE':
+                    patternHelp.textContent = 'Pattern to extract from table structure';
+                    extractionGroupDiv.style.display = 'block';
+                    break;
+                case 'KEY_VALUE':
+                    patternHelp.textContent = 'Key name to extract value from "key: value" pairs';
+                    extractionGroupDiv.style.display = 'none';
+                    break;
+            }
+        }
+
+        function testPattern() {
+            const type = document.getElementById('ruleType').value;
+            const pattern = document.getElementById('rulePattern').value;
+            const output = document.getElementById('testOutput').value;
+            const extractionGroup = document.getElementById('ruleExtractionGroup').value;
+            
+            if (!pattern || !output) {
+                showError('Please enter both pattern and sample output');
+                return;
+            }
+            
+            try {
+                let result = '';
+                
+                switch (type) {
+                    case 'REGEX':
+                        const regex = new RegExp(pattern, 'gm');
+                        const matches = [...output.matchAll(regex)];
+                        if (matches.length > 0) {
+                            const groupIndex = parseInt(extractionGroup) || 1;
+                            result = matches.map(match => 
+                                match[groupIndex] || match[0]
+                            ).join(', ');
+                        } else {
+                            result = 'No matches found';
+                        }
+                        break;
+                        
+                    case 'GREP':
+                        const lines = output.split('\n');
+                        const grepRegex = new RegExp(pattern, 'i');
+                        const matchingLines = lines.filter(line => grepRegex.test(line));
+                        result = matchingLines.length > 0 ? matchingLines.join('\n') : 'No matching lines';
+                        break;
+                        
+                    case 'LINE_COUNT':
+                        const countLines = output.split('\n');
+                        const countRegex = new RegExp(pattern, 'gm');
+                        const count = countLines.filter(line => countRegex.test(line)).length;
+                        result = count.toString();
+                        break;
+                        
+                    case 'CONTAINS':
+                        const containsRegex = new RegExp(pattern, 'i');
+                        result = containsRegex.test(output) ? 'true' : 'false';
+                        break;
+                        
+                    default:
+                        result = 'Pattern testing not implemented for this type';
+                }
+                
+                document.getElementById('testResultContent').textContent = result;
+                document.getElementById('testResult').style.display = 'block';
+                
+            } catch (error) {
+                document.getElementById('testResultContent').textContent = 'Error: ' + error.message;
+                document.getElementById('testResult').style.display = 'block';
+            }
+        }
+
+        function saveRule() {
+            const rule = {
+                variableName: document.getElementById('ruleVariableName').value.trim(),
+                type: document.getElementById('ruleType').value,
+                pattern: document.getElementById('rulePattern').value.trim(),
+                extractionGroup: document.getElementById('ruleExtractionGroup').value,
+                transform: document.getElementById('ruleTransform').value,
+                defaultValue: document.getElementById('ruleDefaultValue').value,
+                required: document.getElementById('ruleRequired').checked,
+                description: document.getElementById('ruleDescription').value.trim()
+            };
+            
+            // Validation
+            if (!rule.variableName) {
+                showError('Variable name is required');
+                return;
+            }
+            
+            if (!rule.pattern) {
+                showError('Pattern is required');
+                return;
+            }
+            
+            // Check for duplicate variable names
+            const existingIndex = currentTemplate.rules.findIndex(r => r.variableName === rule.variableName);
+            if (existingIndex !== -1 && existingIndex !== editingRuleIndex) {
+                showError('Variable name already exists');
+                return;
+            }
+            
+            if (editingRuleIndex === -1) {
+                currentTemplate.rules.push(rule);
+            } else {
+                currentTemplate.rules[editingRuleIndex] = rule;
+            }
+            
+            bootstrap.Modal.getInstance(document.getElementById('ruleEditorModal')).hide();
+            renderRules();
+            updateVariablesPreview();
+        }
+
+        function updateVariablesPreview() {
+            const preview = document.getElementById('variablesPreview');
+            
+            if (!currentTemplate.rules || currentTemplate.rules.length === 0) {
+                preview.textContent = 'No variables defined yet';
+                return;
+            }
+            
+            const variables = currentTemplate.rules.map(rule => 
+                `\${${rule.variableName}} - ${rule.description || rule.type}`
+            ).join('\n');
+            
+            preview.textContent = variables;
+        }
+
+        function testTemplate() {
+            if (!currentTemplate.rules || currentTemplate.rules.length === 0) {
+                showError('Add at least one parsing rule before testing');
+                return;
+            }
+            
+            // Initialize CodeMirror for test output
+            if (!testCommandEditor) {
+                const textarea = document.getElementById('testCommandOutput');
+                if (!textarea) {
+                    document.getElementById('testTemplateModal').querySelector('.modal-body .col-md-6:first-child').innerHTML = `
+                        <h6>Sample Command Output</h6>
+                        <textarea id="testCommandOutput" class="form-control" rows="12" placeholder="Paste command output here..."></textarea>
+                    `;
+                }
+            }
+            
+            new bootstrap.Modal(document.getElementById('testTemplateModal')).show();
+        }
+
+        async function runTemplateTest() {
+            const output = document.getElementById('testCommandOutput').value;
+            if (!output.trim()) {
+                showError('Please enter sample command output');
+                return;
+            }
+            
+            try {
+                const testTemplate = collectTemplateData();
+                const response = await fetch(`/api/output-parsing/templates/test_template_${Date.now()}/test`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ output: output })
+                });
+                
+                // For now, simulate the test locally
+                const extractedVars = {};
+                
+                // Simple simulation - in real implementation would call the actual parsing service
+                currentTemplate.rules.forEach(rule => {
+                    try {
+                        if (rule.type === 'REGEX') {
+                            const regex = new RegExp(rule.pattern, 'gm');
+                            const match = regex.exec(output);
+                            if (match) {
+                                const groupIndex = parseInt(rule.extractionGroup) || 1;
+                                extractedVars[rule.variableName] = match[groupIndex] || match[0];
+                            }
+                        } else if (rule.type === 'CONTAINS') {
+                            const regex = new RegExp(rule.pattern, 'i');
+                            extractedVars[rule.variableName] = regex.test(output) ? 'true' : 'false';
+                        }
+                        // Add other type implementations
+                    } catch (e) {
+                        extractedVars[rule.variableName] = 'Error: ' + e.message;
+                    }
+                });
+                
+                const varsDisplay = Object.keys(extractedVars).length > 0 
+                    ? Object.entries(extractedVars).map(([key, value]) => 
+                        `\${${key}} = "${value}"`
+                    ).join('\n')
+                    : 'No variables extracted';
+                
+                document.getElementById('testExtractedVars').textContent = varsDisplay;
+                
+            } catch (error) {
+                showError('Error testing template: ' + error.message);
+            }
+        }
+
+        function collectTemplateData() {
+            return {
+                id: document.getElementById('templateId').value.trim(),
+                name: document.getElementById('templateName').value.trim(),
+                description: document.getElementById('templateDescription').value.trim(),
+                deviceType: document.getElementById('deviceType').value,
+                commandPattern: document.getElementById('commandPattern').value.trim(),
+                rules: currentTemplate.rules
+            };
+        }
+
+        async function saveTemplate() {
+            const template = collectTemplateData();
+            
+            // Validation
+            if (!template.name) {
+                showError('Template name is required');
+                return;
+            }
+            
+            if (!template.id) {
+                showError('Template ID is required');
+                return;
+            }
+            
+            if (!template.rules || template.rules.length === 0) {
+                showError('At least one parsing rule is required');
+                return;
+            }
+            
+            try {
+                const method = currentTemplate.id ? 'PUT' : 'POST';
+                const url = currentTemplate.id 
+                    ? `/api/output-parsing/templates/${currentTemplate.id}`
+                    : '/api/output-parsing/templates';
+                
+                const response = await fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(template)
+                });
+                
+                if (response.ok) {
+                    showSuccess('Template saved successfully');
+                    setTimeout(() => {
+                        window.location.href = '/output-parsing';
+                    }, 1000);
+                } else {
+                    throw new Error('Failed to save template');
+                }
+            } catch (error) {
+                console.error('Error saving template:', error);
+                showError('Failed to save template: ' + error.message);
+            }
+        }
+
+        function previewTemplate() {
+            const template = collectTemplateData();
+            const preview = {
+                'Basic Information': {
+                    'Name': template.name,
+                    'ID': template.id,
+                    'Device Type': template.deviceType,
+                    'Command Pattern': template.commandPattern || 'Any command',
+                    'Description': template.description || 'No description'
+                },
+                'Parsing Rules': template.rules.map(rule => ({
+                    'Variable': `\${${rule.variableName}}`,
+                    'Type': rule.type,
+                    'Pattern': rule.pattern,
+                    'Description': rule.description || 'No description'
+                }))
+            };
+            
+            alert('Template Preview:\n\n' + JSON.stringify(preview, null, 2));
+        }
+
+        function cancelEdit() {
+            if (confirm('Are you sure you want to cancel? Any unsaved changes will be lost.')) {
+                window.location.href = '/output-parsing';
+            }
+        }
+    </script>
+</body>
+</html>

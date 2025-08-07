@@ -59,4 +59,25 @@ public class WebController {
         model.addAttribute("pageTitle", "About");
         return "about";
     }
+
+    @GetMapping("/output-parsing")
+    public String outputParsingList() {
+        return "output-parsing/list";
+    }
+    
+    @GetMapping("/output-parsing/new")
+    public String newOutputParsingTemplate() {
+        return "output-parsing/editor";
+    }
+    
+    @GetMapping("/output-parsing/{id}")
+    public String editOutputParsingTemplate(@PathVariable String id, Model model) {
+        model.addAttribute("templateId", id);
+        return "output-parsing/editor";
+    }
+    
+    @GetMapping("/output-parsing/test")
+    public String testOutputParsing() {
+        return "output-parsing/test";
+    }
 }
