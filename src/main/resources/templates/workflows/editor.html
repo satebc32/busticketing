@@ -690,7 +690,16 @@
                                 • <strong>Specialized:</strong> <code>\${vlan_status}</code>, <code>\${interface_status}</code>, <code>\${ping_status}</code><br>
                                 • <strong>Advanced:</strong> <code>\${route_status}</code>, <code>\${save_status}</code>, <code>\${show_status}</code><br>
                                 • <strong>Confidence:</strong> <code>\${success_confidence}</code>, <code>\${failure_confidence}</code> (numeric scores)<br>
-                                • <strong>VLAN IDs:</strong> <code>\${vlan_[id]_status}</code> (e.g., vlan_100_status)
+                                • <strong>VLAN IDs:</strong> <code>\${vlan_[id]_status}</code> (e.g., vlan_100_status)<br><br>
+                                
+                                <strong><i class="fas fa-magic"></i> Template-Based Variables:</strong><br>
+                                • <strong>Interface Info:</strong> <code>\${interface_name}</code>, <code>\${admin_status}</code>, <code>\${operational_status}</code>, <code>\${ip_address}</code><br>
+                                • <strong>VLAN Details:</strong> <code>\${vlan_100_name}</code>, <code>\${total_vlans}</code>, <code>\${active_vlans}</code><br>
+                                • <strong>System Info:</strong> <code>\${ios_version}</code>, <code>\${device_model}</code>, <code>\${uptime_days}</code>, <code>\${serial_number}</code><br>
+                                • <strong>Routing:</strong> <code>\${default_route_via}</code>, <code>\${static_routes_count}</code>, <code>\${has_default_route}</code><br>
+                                • <strong>Ping Results:</strong> <code>\${ping_target}</code>, <code>\${packets_sent}</code>, <code>\${packet_loss_percent}</code>, <code>\${ping_success}</code><br>
+                                • <strong>Counters:</strong> <code>\${total_mac_entries}</code>, <code>\${total_arp_entries}</code>, <code>\${command_count}</code><br>
+                                • <strong>Custom Grep:</strong> <code>\${error_lines}</code>, <code>\${success_lines}</code>, <code>\${ip_addresses}</code>
                             </small>
                         </div>
                     `);

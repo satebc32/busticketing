@@ -27,6 +27,9 @@ public class WorkflowExecutionService {
     @Autowired
     private TemplateService templateService;
     
+    @Autowired
+    private OutputParsingService outputParsingService;
+    
     private final ExecutorService executorService;
     private final Map<String, WorkflowExecution> activeExecutions;
 
@@ -170,123 +173,117 @@ public class WorkflowExecutionService {
     }
 
     private boolean executeDeviceConfigTask(WorkflowExecution execution, WorkflowTask task) {
+        // Execute device configuration task
         try {
-            DeviceConnection connection = createDeviceConnection(task);
-            Object configCommandsParam = task.getParameter("commands");
-            if (configCommandsParam == null) {
-                task.setErrorMessage("No commands specified");
-                return false;
-            }
+            Map<String, Object> netmikoParams = new HashMap<>();
+            netmikoParams.put("device_type", task.getParameter("device_type"));
+            netmikoParams.put("host", task.getParameter("host"));
+            netmikoParams.put("username", task.getParameter("username"));
+            netmikoParams.put("password", task.getParameter("password"));
+            netmikoParams.put("commands", task.getParameter("commands"));
 
-            String configCommands = (String) configCommandsParam;
-            Object timeoutParam = task.getParameter("timeout");
-            int timeout = timeoutParam != null ? (Integer) timeoutParam : 60;
-
-            NetmikoResult result = netmikoService.executeDeviceConfig(connection, configCommands, timeout);
+            String output = netmikoService.executeCommands(netmikoParams);
             
-            task.setOutput(result.getOutput());
+            // Apply template-based output parsing to extract variables
+            String deviceType = (String) task.getParameter("device_type");
+            String commands = (String) task.getParameter("commands");
             
-            // Automatically set variables based on task name and content
-            String taskVariableName = createVariableNameFromTask(task);
-            String resultVariableName = taskVariableName + "_result";
-            String outputVariableName = taskVariableName + "_output";
-            
-            // Set the command output
-            execution.setVariable(outputVariableName, result.getOutput());
-            
-            // Set the result status 
-            if (result.isSuccess()) {
-                execution.setVariable(resultVariableName, "success");
-                
-                // Store output variable if manually specified
-                String outputVar = (String) task.getParameter("output_variable");
-                if (outputVar != null) {
-                    execution.setVariable(outputVar, result.getOutput());
+            // Parse output using templates for each command
+            if (commands != null) {
+                String[] commandList = commands.split("\n");
+                for (String command : commandList) {
+                    if (command.trim().isEmpty()) continue;
+                    
+                    Map<String, String> parsedVariables = outputParsingService.parseOutput(
+                        command.trim(), output, deviceType);
+                    
+                    // Set all extracted variables in the execution context
+                    for (Map.Entry<String, String> variable : parsedVariables.entrySet()) {
+                        execution.setVariable(variable.getKey(), variable.getValue());
+                        logger.debug("Set template variable '{}' = '{}'", variable.getKey(), variable.getValue());
+                    }
                 }
-                
-                // Auto-detect specific success patterns
-                setSpecializedVariables(execution, task, result.getOutput());
-                
-                return true;
-            } else {
-                execution.setVariable(resultVariableName, "failed");
-                task.setErrorMessage(result.getMessage());
-                return false;
             }
-
+            
+            // Set task-specific variables with variable name based on task name
+            String variableName = createVariableNameFromTask(task);
+            execution.setVariable(variableName + "_result", "success");
+            execution.setVariable(variableName + "_output", output);
+            
+            // Set specialized variables based on task content
+            setSpecializedVariables(execution, task, output);
+            
+            return true;
         } catch (Exception e) {
-            task.setErrorMessage("Device config execution error: " + e.getMessage());
+            logger.error("Error executing device config task: {}", e.getMessage());
+            String variableName = createVariableNameFromTask(task);
+            execution.setVariable(variableName + "_result", "failed");
+            execution.setVariable(variableName + "_output", e.getMessage());
             return false;
         }
     }
 
     private boolean executeTemplateConfigTask(WorkflowExecution execution, WorkflowTask task) {
         try {
-            String templateId = task.getTemplateId();
-            if (templateId == null) {
+            Object templateIdParam = task.getParameter("template_id");
+            if (templateIdParam == null) {
                 task.setErrorMessage("No template specified");
                 return false;
             }
 
+            String templateId = (String) templateIdParam;
             DeviceConfigTemplate template = templateService.getTemplate(templateId);
             if (template == null) {
                 task.setErrorMessage("Template not found: " + templateId);
                 return false;
             }
 
-            // Prepare template parameters
-            Map<String, Object> templateParams = new HashMap<>(task.getParameters());
-            
-            // Add workflow variables
-            templateParams.putAll(execution.getVariables());
+            // Apply template with variables
+            String configCommands = templateService.applyTemplate(template, execution.getVariables());
 
-            // Validate required parameters
-            List<String> missingParams = template.validateParameters(templateParams);
-            if (!missingParams.isEmpty()) {
-                task.setErrorMessage("Missing required parameters: " + missingParams);
-                return false;
-            }
+            Map<String, Object> netmikoParams = new HashMap<>();
+            netmikoParams.put("device_type", task.getParameter("device_type"));
+            netmikoParams.put("host", task.getParameter("host"));
+            netmikoParams.put("username", task.getParameter("username"));
+            netmikoParams.put("password", task.getParameter("password"));
+            netmikoParams.put("commands", configCommands);
 
-            // Process template
-            String processedConfig = template.processTemplate(templateParams);
+            String output = netmikoService.executeCommands(netmikoParams);
             
-            // Execute the processed configuration
-            DeviceConnection connection = createDeviceConnection(task);
-            Object timeoutParam = task.getParameter("timeout");
-            int timeout = timeoutParam != null ? (Integer) timeoutParam : 60;
-            NetmikoResult result = netmikoService.executeDeviceConfig(connection, processedConfig, timeout);
+            // Apply template-based output parsing to extract variables
+            String deviceType = (String) task.getParameter("device_type");
             
-            task.setOutput(result.getOutput());
-            
-            // Automatically set variables based on task name and content
-            String taskVariableName = createVariableNameFromTask(task);
-            String resultVariableName = taskVariableName + "_result";
-            String outputVariableName = taskVariableName + "_output";
-            
-            // Set the command output
-            execution.setVariable(outputVariableName, result.getOutput());
-            
-            if (result.isSuccess()) {
-                execution.setVariable(resultVariableName, "success");
-                
-                // Store output variable if manually specified
-                String outputVar = (String) task.getParameter("output_variable");
-                if (outputVar != null) {
-                    execution.setVariable(outputVar, result.getOutput());
+            // Parse output using templates for each command in the applied template
+            if (configCommands != null) {
+                String[] commandList = configCommands.split("\n");
+                for (String command : commandList) {
+                    if (command.trim().isEmpty()) continue;
+                    
+                    Map<String, String> parsedVariables = outputParsingService.parseOutput(
+                        command.trim(), output, deviceType);
+                    
+                    // Set all extracted variables in the execution context
+                    for (Map.Entry<String, String> variable : parsedVariables.entrySet()) {
+                        execution.setVariable(variable.getKey(), variable.getValue());
+                        logger.debug("Set template variable '{}' = '{}'", variable.getKey(), variable.getValue());
+                    }
                 }
-                
-                // Auto-detect specific success patterns
-                setSpecializedVariables(execution, task, result.getOutput());
-                
-                return true;
-            } else {
-                execution.setVariable(resultVariableName, "failed");
-                task.setErrorMessage(result.getMessage());
-                return false;
             }
 
+            // Set task-specific variables with variable name based on task name
+            String variableName = createVariableNameFromTask(task);
+            execution.setVariable(variableName + "_result", "success");
+            execution.setVariable(variableName + "_output", output);
+            
+            // Set specialized variables based on task content
+            setSpecializedVariables(execution, task, output);
+
+            return true;
         } catch (Exception e) {
-            task.setErrorMessage("Template execution error: " + e.getMessage());
+            logger.error("Error executing template config task: {}", e.getMessage());
+            String variableName = createVariableNameFromTask(task);
+            execution.setVariable(variableName + "_result", "failed");
+            execution.setVariable(variableName + "_output", e.getMessage());
             return false;
         }
     }

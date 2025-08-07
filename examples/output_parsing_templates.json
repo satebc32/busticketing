@@ -1,0 +1,404 @@
+{
+  "output_parsing_templates": [
+    {
+      "id": "cisco_show_vlan_detailed",
+      "name": "Cisco Show VLAN Detailed Parser",
+      "description": "Extract detailed VLAN information from Cisco show vlan command",
+      "deviceType": "cisco",
+      "commandPattern": "show\\s+vlan\\s*(brief|detailed)?",
+      "rules": [
+        {
+          "variableName": "vlan_100_name",
+          "pattern": "^100\\s+(\\w+)\\s+active",
+          "type": "REGEX",
+          "extractionGroup": "1",
+          "description": "VLAN 100 name",
+          "transform": "trim"
+        },
+        {
+          "variableName": "vlan_100_status",
+          "pattern": "^100\\s+\\w+\\s+(\\w+)",
+          "type": "REGEX",
+          "extractionGroup": "1",
+          "description": "VLAN 100 status",
+          "defaultValue": "unknown"
+        },
+        {
+          "variableName": "vlan_200_ports",
+          "pattern": "^200\\s+\\w+\\s+\\w+\\s+(.+)",
+          "type": "REGEX",
+          "extractionGroup": "1",
+          "description": "VLAN 200 assigned ports",
+          "transform": "trim"
+        },
+        {
+          "variableName": "total_vlans",
+          "pattern": "^\\d+\\s+\\w+",
+          "type": "LINE_COUNT",
+          "description": "Total number of VLANs configured"
+        },
+        {
+          "variableName": "active_vlans",
+          "pattern": "active",
+          "type": "LINE_COUNT",
+          "description": "Number of active VLANs"
+        }
+      ]
+    },
+    {
+      "id": "interface_status_parser",
+      "name": "Interface Status Parser",
+      "description": "Extract interface status from show interface commands",
+      "deviceType": "generic",
+      "commandPattern": "show\\s+interface",
+      "rules": [
+        {
+          "variableName": "interface_name",
+          "pattern": "^(\\w+\\d+/\\d+)\\s+is",
+          "type": "REGEX",
+          "extractionGroup": "1",
+          "description": "Interface name"
+        },
+        {
+          "variableName": "admin_status",
+          "pattern": "is\\s+(up|down|administratively down)",
+          "type": "REGEX",
+          "extractionGroup": "1",
+          "description": "Administrative status"
+        },
+        {
+          "variableName": "operational_status",
+          "pattern": "line protocol is\\s+(up|down)",
+          "type": "REGEX",
+          "extractionGroup": "1",
+          "description": "Operational status"
+        },
+        {
+          "variableName": "ip_address",
+          "pattern": "Internet address is\\s+(\\d+\\.\\d+\\.\\d+\\.\\d+/\\d+)",
+          "type": "REGEX",
+          "extractionGroup": "1",
+          "description": "IP address with subnet"
+        },
+        {
+          "variableName": "mtu",
+          "pattern": "MTU\\s+(\\d+)",
+          "type": "REGEX",
+          "extractionGroup": "1",
+          "description": "Interface MTU"
+        },
+        {
+          "variableName": "bandwidth",
+          "pattern": "BW\\s+(\\d+)",
+          "type": "REGEX",
+          "extractionGroup": "1",
+          "description": "Interface bandwidth"
+        }
+      ]
+    },
+    {
+      "id": "routing_table_parser",
+      "name": "Routing Table Parser",
+      "description": "Parse routing table information",
+      "deviceType": "generic",
+      "commandPattern": "show\\s+ip\\s+route",
+      "rules": [
+        {
+          "variableName": "default_route_via",
+          "pattern": "0\\.0\\.0\\.0/0.*via\\s+(\\d+\\.\\d+\\.\\d+\\.\\d+)",
+          "type": "REGEX",
+          "extractionGroup": "1",
+          "description": "Default route next hop"
+        },
+        {
+          "variableName": "connected_networks",
+          "pattern": "C\\s+(\\d+\\.\\d+\\.\\d+\\.\\d+/\\d+)",
+          "type": "GREP",
+          "description": "Connected networks"
+        },
+        {
+          "variableName": "static_routes_count",
+          "pattern": "^S\\s+",
+          "type": "LINE_COUNT",
+          "description": "Number of static routes"
+        },
+        {
+          "variableName": "ospf_routes_count",
+          "pattern": "^O\\s+",
+          "type": "LINE_COUNT",
+          "description": "Number of OSPF routes"
+        },
+        {
+          "variableName": "has_default_route",
+          "pattern": "0\\.0\\.0\\.0/0",
+          "type": "CONTAINS",
+          "description": "Check if default route exists"
+        }
+      ]
+    },
+    {
+      "id": "system_version_parser",
+      "name": "System Version Parser",
+      "description": "Extract system information from show version",
+      "deviceType": "cisco",
+      "commandPattern": "show\\s+version",
+      "rules": [
+        {
+          "variableName": "ios_version",
+          "pattern": "Cisco IOS.*Version\\s+([\\d\\.\\w\\(\\)]+)",
+          "type": "REGEX",
+          "extractionGroup": "1",
+          "description": "IOS Version"
+        },
+        {
+          "variableName": "device_model",
+          "pattern": "cisco\\s+(\\w+)",
+          "type": "REGEX",
+          "extractionGroup": "1",
+          "description": "Device model",
+          "transform": "uppercase"
+        },
+        {
+          "variableName": "uptime_days",
+          "pattern": "uptime is\\s+(\\d+)\\s+days?",
+          "type": "REGEX",
+          "extractionGroup": "1",
+          "description": "Uptime in days"
+        },
+        {
+          "variableName": "serial_number",
+          "pattern": "Processor board ID\\s+(\\w+)",
+          "type": "REGEX",
+          "extractionGroup": "1",
+          "description": "Device serial number"
+        },
+        {
+          "variableName": "memory_size",
+          "pattern": "(\\d+)K bytes of memory",
+          "type": "REGEX",
+          "extractionGroup": "1",
+          "description": "Total memory in KB"
+        }
+      ]
+    },
+    {
+      "id": "ping_test_parser",
+      "name": "Ping Test Results Parser",
+      "description": "Parse ping command results",
+      "deviceType": "generic",
+      "commandPattern": "ping",
+      "rules": [
+        {
+          "variableName": "ping_target",
+          "pattern": "PING\\s+(\\d+\\.\\d+\\.\\d+\\.\\d+)",
+          "type": "REGEX",
+          "extractionGroup": "1",
+          "description": "Ping target IP"
+        },
+        {
+          "variableName": "packets_sent",
+          "pattern": "(\\d+)\\s+packets transmitted",
+          "type": "REGEX",
+          "extractionGroup": "1",
+          "description": "Number of packets sent"
+        },
+        {
+          "variableName": "packets_received",
+          "pattern": "(\\d+)\\s+packets received",
+          "type": "REGEX",
+          "extractionGroup": "1",
+          "description": "Number of packets received"
+        },
+        {
+          "variableName": "packet_loss_percent",
+          "pattern": "(\\d+)%\\s+packet\\s+loss",
+          "type": "REGEX",
+          "extractionGroup": "1",
+          "description": "Packet loss percentage"
+        },
+        {
+          "variableName": "min_rtt",
+          "pattern": "min/avg/max.*=\\s+([\\d\\.]+)",
+          "type": "REGEX",
+          "extractionGroup": "1",
+          "description": "Minimum RTT"
+        },
+        {
+          "variableName": "avg_rtt",
+          "pattern": "min/avg/max.*=\\s+[\\d\\.]+/([\\d\\.]+)",
+          "type": "REGEX",
+          "extractionGroup": "1",
+          "description": "Average RTT"
+        },
+        {
+          "variableName": "ping_success",
+          "pattern": "0%\\s+packet\\s+loss",
+          "type": "CONTAINS",
+          "description": "Check if ping was successful"
+        }
+      ]
+    },
+    {
+      "id": "mac_address_table_parser",
+      "name": "MAC Address Table Parser",
+      "description": "Parse MAC address table output",
+      "deviceType": "cisco",
+      "commandPattern": "show\\s+mac.*address.*table",
+      "rules": [
+        {
+          "variableName": "total_mac_entries",
+          "pattern": "^\\s*\\d+\\s+[a-fA-F0-9]{4}\\.[a-fA-F0-9]{4}\\.[a-fA-F0-9]{4}",
+          "type": "LINE_COUNT",
+          "description": "Total MAC address entries"
+        },
+        {
+          "variableName": "dynamic_entries",
+          "pattern": "dynamic",
+          "type": "LINE_COUNT",
+          "description": "Number of dynamic MAC entries"
+        },
+        {
+          "variableName": "static_entries",
+          "pattern": "static",
+          "type": "LINE_COUNT",
+          "description": "Number of static MAC entries"
+        },
+        {
+          "variableName": "vlan_100_macs",
+          "pattern": "^\\s*100\\s+[a-fA-F0-9]{4}\\.[a-fA-F0-9]{4}\\.[a-fA-F0-9]{4}",
+          "type": "LINE_COUNT",
+          "description": "MAC addresses in VLAN 100"
+        }
+      ]
+    },
+    {
+      "id": "arp_table_parser",
+      "name": "ARP Table Parser",
+      "description": "Parse ARP table information",
+      "deviceType": "generic",
+      "commandPattern": "show\\s+(ip\\s+)?arp",
+      "rules": [
+        {
+          "variableName": "total_arp_entries",
+          "pattern": "\\d+\\.\\d+\\.\\d+\\.\\d+",
+          "type": "LINE_COUNT",
+          "description": "Total ARP entries"
+        },
+        {
+          "variableName": "gateway_mac",
+          "pattern": "(\\d+\\.\\d+\\.\\d+\\.1).*([a-fA-F0-9]{4}\\.[a-fA-F0-9]{4}\\.[a-fA-F0-9]{4})",
+          "type": "REGEX",
+          "extractionGroup": "2",
+          "description": "Gateway MAC address"
+        },
+        {
+          "variableName": "incomplete_entries",
+          "pattern": "incomplete",
+          "type": "LINE_COUNT",
+          "description": "Number of incomplete ARP entries"
+        }
+      ]
+    },
+    {
+      "id": "bgp_summary_parser",
+      "name": "BGP Summary Parser",
+      "description": "Parse BGP neighbor summary",
+      "deviceType": "cisco",
+      "commandPattern": "show\\s+ip\\s+bgp\\s+summary",
+      "rules": [
+        {
+          "variableName": "bgp_router_id",
+          "pattern": "BGP router identifier\\s+(\\d+\\.\\d+\\.\\d+\\.\\d+)",
+          "type": "REGEX",
+          "extractionGroup": "1",
+          "description": "BGP Router ID"
+        },
+        {
+          "variableName": "local_as",
+          "pattern": "local AS number\\s+(\\d+)",
+          "type": "REGEX",
+          "extractionGroup": "1",
+          "description": "Local AS number"
+        },
+        {
+          "variableName": "established_neighbors",
+          "pattern": "\\d+\\.\\d+\\.\\d+\\.\\d+.*Established",
+          "type": "LINE_COUNT",
+          "description": "Number of established BGP neighbors"
+        },
+        {
+          "variableName": "total_neighbors",
+          "pattern": "^\\d+\\.\\d+\\.\\d+\\.\\d+",
+          "type": "LINE_COUNT",
+          "description": "Total BGP neighbors configured"
+        }
+      ]
+    },
+    {
+      "id": "configuration_mode_parser",
+      "name": "Configuration Mode Parser",
+      "description": "Parse configuration command responses",
+      "deviceType": "generic",
+      "commandPattern": ".*",
+      "rules": [
+        {
+          "variableName": "config_mode_entered",
+          "pattern": "\\(config\\)#",
+          "type": "CONTAINS",
+          "description": "Successfully entered configuration mode"
+        },
+        {
+          "variableName": "config_saved",
+          "pattern": "Building configuration|\\[OK\\]|Saved",
+          "type": "CONTAINS",
+          "description": "Configuration saved successfully"
+        },
+        {
+          "variableName": "syntax_error",
+          "pattern": "%\\s*(Invalid|Unknown|Incomplete)",
+          "type": "CONTAINS",
+          "description": "Syntax error detected"
+        },
+        {
+          "variableName": "command_count",
+          "pattern": ".*",
+          "type": "LINE_COUNT",
+          "description": "Total number of lines in output"
+        }
+      ]
+    },
+    {
+      "id": "custom_grep_parser",
+      "name": "Custom Grep Parser",
+      "description": "Generic parser for grep-like operations",
+      "deviceType": "generic",
+      "commandPattern": ".*",
+      "rules": [
+        {
+          "variableName": "error_lines",
+          "pattern": "error|fail|down|invalid",
+          "type": "GREP",
+          "description": "Lines containing error keywords"
+        },
+        {
+          "variableName": "success_lines",
+          "pattern": "success|ok|up|active|operational",
+          "type": "GREP",
+          "description": "Lines containing success keywords"
+        },
+        {
+          "variableName": "ip_addresses",
+          "pattern": "\\d+\\.\\d+\\.\\d+\\.\\d+",
+          "type": "GREP",
+          "description": "All IP addresses found in output"
+        },
+        {
+          "variableName": "interface_names",
+          "pattern": "(GigabitEthernet|FastEthernet|Ethernet)\\d+/\\d+",
+          "type": "GREP",
+          "description": "All interface names found"
+        }
+      ]
+    }
+  ]
+}
