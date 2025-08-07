@@ -171,34 +171,45 @@ public class WorkflowExecutionService {
 
     private boolean executeDeviceConfigTask(WorkflowExecution execution, WorkflowTask task) {
         try {
-            // Get device connection parameters
             DeviceConnection connection = createDeviceConnection(task);
-            
-            // Get configuration commands
-            String configCommands = (String) task.getParameter("config_commands");
-            if (configCommands == null || configCommands.trim().isEmpty()) {
-                task.setErrorMessage("No configuration commands specified");
+            Object configCommandsParam = task.getParameter("commands");
+            if (configCommandsParam == null) {
+                task.setErrorMessage("No commands specified");
                 return false;
             }
 
-            // Process variables in commands
-            configCommands = processVariables(execution, configCommands);
-
-            // Execute via Netmiko
+            String configCommands = (String) configCommandsParam;
             Object timeoutParam = task.getParameter("timeout");
             int timeout = timeoutParam != null ? (Integer) timeoutParam : 60;
+
             NetmikoResult result = netmikoService.executeDeviceConfig(connection, configCommands, timeout);
             
             task.setOutput(result.getOutput());
             
+            // Automatically set variables based on task name and content
+            String taskVariableName = createVariableNameFromTask(task);
+            String resultVariableName = taskVariableName + "_result";
+            String outputVariableName = taskVariableName + "_output";
+            
+            // Set the command output
+            execution.setVariable(outputVariableName, result.getOutput());
+            
+            // Set the result status 
             if (result.isSuccess()) {
-                // Store output variables if specified
+                execution.setVariable(resultVariableName, "success");
+                
+                // Store output variable if manually specified
                 String outputVar = (String) task.getParameter("output_variable");
                 if (outputVar != null) {
                     execution.setVariable(outputVar, result.getOutput());
                 }
+                
+                // Auto-detect specific success patterns
+                setSpecializedVariables(execution, task, result.getOutput());
+                
                 return true;
             } else {
+                execution.setVariable(resultVariableName, "failed");
                 task.setErrorMessage(result.getMessage());
                 return false;
             }
@@ -247,13 +258,29 @@ public class WorkflowExecutionService {
             
             task.setOutput(result.getOutput());
             
+            // Automatically set variables based on task name and content
+            String taskVariableName = createVariableNameFromTask(task);
+            String resultVariableName = taskVariableName + "_result";
+            String outputVariableName = taskVariableName + "_output";
+            
+            // Set the command output
+            execution.setVariable(outputVariableName, result.getOutput());
+            
             if (result.isSuccess()) {
+                execution.setVariable(resultVariableName, "success");
+                
+                // Store output variable if manually specified
                 String outputVar = (String) task.getParameter("output_variable");
                 if (outputVar != null) {
                     execution.setVariable(outputVar, result.getOutput());
                 }
+                
+                // Auto-detect specific success patterns
+                setSpecializedVariables(execution, task, result.getOutput());
+                
                 return true;
             } else {
+                execution.setVariable(resultVariableName, "failed");
                 task.setErrorMessage(result.getMessage());
                 return false;
             }
@@ -506,6 +533,64 @@ public class WorkflowExecutionService {
     private boolean isTaskCritical(WorkflowTask task) {
         Boolean critical = (Boolean) task.getParameter("critical");
         return critical != null && critical;
+    }
+
+    /**
+     * Create a variable name from task name by removing spaces and special characters
+     */
+    private String createVariableNameFromTask(WorkflowTask task) {
+        String taskName = task.getName();
+        if (taskName == null || taskName.trim().isEmpty()) {
+            return "task_" + task.getId();
+        }
+        
+        // Convert to lowercase and replace spaces/special chars with underscores
+        return taskName.toLowerCase()
+                      .replaceAll("[^a-z0-9]+", "_")
+                      .replaceAll("^_+|_+$", ""); // Remove leading/trailing underscores
+    }
+    
+    /**
+     * Set specialized variables based on task content and output patterns
+     */
+    private void setSpecializedVariables(WorkflowExecution execution, WorkflowTask task, String output) {
+        String taskName = task.getName().toLowerCase();
+        String outputLower = output.toLowerCase();
+        
+        // VLAN-specific variable detection
+        if (taskName.contains("vlan")) {
+            boolean vlanSuccess = evaluateVlanSuccess(output);
+            execution.setVariable("vlan_status", vlanSuccess ? "success" : "failed");
+            
+            // Extract VLAN ID if present in task parameters
+            Object vlanIdParam = task.getParameter("vlan_id");
+            if (vlanIdParam != null) {
+                String vlanId = String.valueOf(vlanIdParam);
+                execution.setVariable("vlan_" + vlanId + "_status", vlanSuccess ? "active" : "failed");
+            }
+        }
+        
+        // Interface-specific variable detection
+        if (taskName.contains("interface") || outputLower.contains("interface")) {
+            boolean interfaceSuccess = evaluateInterfaceSuccess(output);
+            execution.setVariable("interface_status", interfaceSuccess ? "success" : "failed");
+        }
+        
+        // Ping/connectivity detection
+        if (taskName.contains("ping") || outputLower.contains("ping")) {
+            boolean pingSuccess = outputLower.contains("success") || 
+                                outputLower.contains("reply") || 
+                                outputLower.contains("reachable");
+            execution.setVariable("ping_status", pingSuccess ? "success" : "failed");
+        }
+        
+        // Configuration verification detection
+        if (taskName.contains("verify") || taskName.contains("check")) {
+            boolean verificationSuccess = !outputLower.contains("error") && 
+                                        !outputLower.contains("failed") &&
+                                        !outputLower.contains("not found");
+            execution.setVariable("verification_status", verificationSuccess ? "success" : "failed");
+        }
     }
 
     // Inner classes

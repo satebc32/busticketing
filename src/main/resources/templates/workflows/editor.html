@@ -655,7 +655,16 @@
                         <div class="parameter-row">
                             <label class="form-label">Condition Expression *</label>
                             <input type="text" class="form-control" id="param_condition" value="${escapeHtml(parameters.condition || '')}" required>
-                            <small class="form-text text-muted">Example: \${result} == "success" or \${error_count} > 0</small>
+                            <small class="form-text text-muted">
+                                <strong>Examples:</strong><br>
+                                • <code>\${vlan_status} == "success"</code> - Check VLAN configuration success<br>
+                                • <code>\${apply_vlan_100_result} == "success"</code> - Check specific task result<br>
+                                • <code>\${ping_status} == "success"</code> - Check connectivity<br>
+                                • <code>\${interface_status} == "success"</code> - Check interface configuration<br>
+                                • <code>\${verification_status} == "success"</code> - Check verification tasks<br>
+                                • <code>\${task_output} contains "active"</code> - Check if output contains text<br>
+                                • <code>\${error_count} > 0</code> - Check numeric conditions
+                            </small>
                         </div>
                         <div class="parameter-row">
                             <label class="form-label">Action if True</label>
@@ -672,6 +681,17 @@
                                 <option value="skip" ${parameters.false_action === 'skip' ? 'selected' : ''}>Skip next task</option>
                                 <option value="stop" ${parameters.false_action === 'stop' ? 'selected' : ''}>Stop workflow</option>
                             </select>
+                        </div>
+                        <div class="alert alert-info mt-2">
+                            <small>
+                                <strong><i class="fas fa-info-circle"></i> Auto-Generated Variables:</strong><br>
+                                • Task results: <code>\${task_name_result}</code> (success/failed)<br>
+                                • Task outputs: <code>\${task_name_output}</code> (full command output)<br>
+                                • VLAN tasks: <code>\${vlan_status}</code>, <code>\${vlan_[id]_status}</code><br>
+                                • Interface tasks: <code>\${interface_status}</code><br>
+                                • Ping tasks: <code>\${ping_status}</code><br>
+                                • Verification tasks: <code>\${verification_status}</code>
+                            </small>
                         </div>
                     `);
                     break;
