@@ -207,3 +207,13 @@ networkflow:
         failure-patterns:
           - "no route"
           - "routing table empty"
+
+# Python configuration for Netmiko integration
+python:
+  # Auto-detect Python executable (python3 or python)
+  # Set executable to override auto-detection (e.g., /usr/bin/python3, C:\Python39\python.exe)
+  executable: auto
+  # Script path for Netmiko executor
+  script-path: python/netmiko_executor.py
+  # Default timeout for Python processes (seconds)
+  timeout: 60

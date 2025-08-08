@@ -9,6 +9,7 @@ A **Spring Boot web-based** drag-and-drop workflow builder for network device co
 - **📋 Template System**: Pre-defined and custom configuration templates for various device types
 - **➕ Dynamic Task Insertion**: Insert tasks anywhere in the workflow via GUI
 - **🔌 Netmiko Integration**: Execute device configurations using Python Netmiko library
+- **🐍 Smart Python Detection**: Automatically detects `python3` or `python` executables
 - **🖥️ Multiple Device Support**: Cisco IOS, NX-OS, Arista EOS, Juniper JunOS, and more
 - **🔄 Variable Management**: Dynamic variable substitution in templates and workflows
 - **⚡ Real-time Updates**: WebSocket-based live status updates
@@ -27,22 +28,32 @@ A **Spring Boot web-based** drag-and-drop workflow builder for network device co
 ## Prerequisites
 
 - **Java 17** or higher
-- **Python 3.7** or higher (accessible as `python` command)
+- **Python 3.7** or higher (with `python3` or `python` command)
 - **Maven 3.6** or higher
 - **Modern Web Browser** (Chrome, Firefox, Safari, Edge)
 
-### Python Setup Note
-The application uses the `python` command (not `python3`). Ensure Python is accessible via:
+### 🐍 **Python Auto-Detection**
+The application **automatically detects** the available Python executable:
+- Tries `python3` first (preferred for Linux/Unix systems)
+- Falls back to `python` (common on Windows)
+- Works with both system and virtual environment installations
+- **No manual configuration required!**
+
+**Verification:**
 ```bash
-python --version  # Should show Python 3.7+
+# The application will automatically detect whichever works:
+python3 --version  # Python 3.7+ 
+python --version   # Python 3.7+
 ```
-If you only have `python3`, create a symlink or alias:
-```bash
-# On Linux/Mac:
-sudo ln -s /usr/bin/python3 /usr/local/bin/python
-# Or add to ~/.bashrc:
-alias python=python3
+
+**Manual Override (Optional):**
+If you need to specify a particular Python executable, configure it in `application.yml`:
+```yaml
+python:
+  executable: /path/to/your/python  # e.g., python3, /usr/bin/python3.9
 ```
+
+See [Python Configuration Guide](examples/python_configuration.md) for detailed setup options.
 
 ## Installation
 

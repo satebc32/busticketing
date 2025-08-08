@@ -3,6 +3,7 @@ package com.networkflow.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import java.io.*;
 import java.nio.file.Files;
@@ -22,10 +23,106 @@ public class NetmikoService {
     private final String pythonExecutable;
     private final String netmikoScriptPath;
 
+    @Value("${python.executable:auto}")
+    private String configuredPythonExecutable;
+    
+    @Value("${python.script-path:python/netmiko_executor.py}")
+    private String configuredScriptPath;
+
     public NetmikoService() {
         this.objectMapper = new ObjectMapper();
-        this.pythonExecutable = "python"; // Can be configured
-        this.netmikoScriptPath = "python/netmiko_executor.py";
+        this.pythonExecutable = determinePythonExecutable();
+        this.netmikoScriptPath = configuredScriptPath;
+        logger.info("Using Python executable: {} (Script: {})", pythonExecutable, netmikoScriptPath);
+    }
+    
+    /**
+     * Detect available Python executable (python3 or python)
+     */
+    private String detectPythonExecutable() {
+        String[] candidates = {"python3", "python"};
+        
+        for (String candidate : candidates) {
+            try {
+                ProcessBuilder pb = new ProcessBuilder(candidate, "--version");
+                pb.redirectErrorStream(true);
+                Process process = pb.start();
+                
+                boolean completed = process.waitFor(5, TimeUnit.SECONDS);
+                if (completed && process.exitValue() == 0) {
+                    // Read the version output to verify it's actually Python
+                    try (BufferedReader reader = new BufferedReader(
+                            new InputStreamReader(process.getInputStream()))) {
+                        String versionOutput = reader.readLine();
+                        if (versionOutput != null && versionOutput.toLowerCase().contains("python")) {
+                            logger.info("Detected Python executable: {} ({})", candidate, versionOutput.trim());
+                            return candidate;
+                        }
+                    }
+                }
+                
+                if (!completed) {
+                    process.destroyForcibly();
+                }
+            } catch (Exception e) {
+                logger.debug("Python executable '{}' not available: {}", candidate, e.getMessage());
+            }
+        }
+        
+        // Fallback to 'python' if no detection successful
+        logger.warn("Could not detect Python executable, falling back to 'python'. " +
+                   "Please ensure Python is installed and available in PATH.");
+        return "python";
+    }
+
+    /**
+     * Determine Python executable based on configuration
+     */
+    private String determinePythonExecutable() {
+        // If auto-detection is configured, detect available Python executable
+        if ("auto".equals(configuredPythonExecutable)) {
+            return detectPythonExecutable();
+        } else {
+            // Use configured executable and validate it
+            return validateAndUsePythonExecutable(configuredPythonExecutable);
+        }
+    }
+    
+    /**
+     * Validate and use the specified Python executable
+     */
+    private String validateAndUsePythonExecutable(String pythonPath) {
+        try {
+            ProcessBuilder pb = new ProcessBuilder(pythonPath, "--version");
+            pb.redirectErrorStream(true);
+            Process process = pb.start();
+            
+            boolean completed = process.waitFor(5, TimeUnit.SECONDS);
+            if (completed && process.exitValue() == 0) {
+                try (BufferedReader reader = new BufferedReader(
+                        new InputStreamReader(process.getInputStream()))) {
+                    String versionOutput = reader.readLine();
+                    if (versionOutput != null && versionOutput.toLowerCase().contains("python")) {
+                        logger.info("Using configured Python executable: {} ({})", 
+                                   pythonPath, versionOutput.trim());
+                        return pythonPath;
+                    }
+                }
+            }
+            
+            if (!completed) {
+                process.destroyForcibly();
+            }
+            
+        } catch (Exception e) {
+            logger.error("Error validating configured Python executable '{}': {}. " +
+                        "Falling back to auto-detection.", pythonPath, e.getMessage());
+        }
+        
+        // If configured executable is invalid, fall back to auto-detection
+        logger.warn("Configured Python executable '{}' is invalid. Falling back to auto-detection.", 
+                   pythonPath);
+        return detectPythonExecutable();
     }
 
     /**
@@ -150,6 +247,59 @@ public class NetmikoService {
             logger.error("Error parsing Netmiko output", e);
             return new NetmikoResult(false, "Error parsing output: " + e.getMessage(), processOutput);
         }
+    }
+
+    /**
+     * Get the currently configured Python executable
+     */
+    public String getPythonExecutable() {
+        return pythonExecutable;
+    }
+    
+    /**
+     * Manually set Python executable (for testing or specific configurations)
+     */
+    public NetmikoService withPythonExecutable(String pythonPath) {
+        try {
+            // Validate the provided Python executable
+            ProcessBuilder pb = new ProcessBuilder(pythonPath, "--version");
+            pb.redirectErrorStream(true);
+            Process process = pb.start();
+            
+            boolean completed = process.waitFor(5, TimeUnit.SECONDS);
+            if (completed && process.exitValue() == 0) {
+                try (BufferedReader reader = new BufferedReader(
+                        new InputStreamReader(process.getInputStream()))) {
+                    String versionOutput = reader.readLine();
+                    if (versionOutput != null && versionOutput.toLowerCase().contains("python")) {
+                        logger.info("Manually configured Python executable: {} ({})", 
+                                   pythonPath, versionOutput.trim());
+                        return new NetmikoService(pythonPath);
+                    }
+                }
+            }
+            
+            if (!completed) {
+                process.destroyForcibly();
+            }
+            
+            logger.warn("Invalid Python executable provided: {}. Using auto-detected: {}", 
+                       pythonPath, this.pythonExecutable);
+            return this;
+            
+        } catch (Exception e) {
+            logger.error("Error validating Python executable: {}", e.getMessage());
+            return this;
+        }
+    }
+    
+    /**
+     * Private constructor for manual Python executable configuration
+     */
+    private NetmikoService(String pythonExecutable) {
+        this.objectMapper = new ObjectMapper();
+        this.pythonExecutable = pythonExecutable;
+        this.netmikoScriptPath = "python/netmiko_executor.py";
     }
 
     /**
